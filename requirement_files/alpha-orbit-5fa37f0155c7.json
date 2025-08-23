@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "alpha-orbit",
+  "private_key_id": "5fa37f0155c78ca998ca93b60bd767c5a674f302",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCj5G7vxSWZnSat\nY/SOXDGY8B5fjDNyKwc3+XbSaWQudCu0oZMk/ASVxRYYtR7UTWfQFjkQGcVheJgX\nvjouJbT0TZm7l0E4JWkGXE3GtUeYiugGcCIqIEU9wqTUTVYUgjw+JIEBOmHnGjrm\n7SMCDpEshrDVR7bG5Mo9D0xHcIC6aU1rRmmw/uv7M8iiSa6UhtlOZs+VFD7VAMt6\nGx2RSYmKOLBJt/b/z3o24ACeQ5dDNjzbAjLb18N2pbXbXmCZkyy/9rbH6b77DYpp\n0GAoxqyMOoHXH1H3eRa4bgvx5rAQ459ya5kAGM49bQ2h+9WpRTx2rKZ5lhxfZ2Ge\nW1EBWA3BAgMBAAECggEADrnJL/j+SmGg5oZrJFlrSWsVx48A1lrAYMqk3v4CNtxQ\nSwATiQit3skhFaI8fWXhFITSprwyDHJ58/QvJRNVQXgxfnX2MbXGzIABqv+BydZ9\nR4rOvws8PXLePYcfW2NiR1EfWD1nK40jSrl24kntyFrny5oQdal79GWJ/IdCwbzs\ng0DwC03Azl9JHk6bs+WdI/xVB72+TUNRDadACqXkRYi97gBqkmdY/BYpgfzRzqsD\nh+mzPgU9ikJPM+so1M/0m3520NvF5t7GqyNWbsefvIfYz/j1bz7lPNL44oy2R4i9\nJXzGPKbyvhAKvHpCxl8a5B4qNt3BwJ7az3yxnXtDGQKBgQDcoHkFs2EE2OMaWPhW\nLZprjRDOUh72dqK2onPD+19+AKR/Wio6uyZdK5rBvK4zeU30wEHc4ETM/osL5mYf\nNoUPD/ggnTRV+BuDuSKnocqZXy+OEOJW43yGL+MGUFopcayjHC5tNOEEuuvEl+J3\nxxizGag30z504y5fFUaT7iYZBQKBgQC+K1Fo77EoRnXUijy3Wav53pLj700ZdZPp\nMfsNP6nhThrmD9ypCd1f7rkZ69nfBJWE6CiaVj203bX06zzIPwu05Ovxu2NcxGZG\ng7nCm7g13KeZEpFY4yZ5jCn/2RVel8ejtEGS8MAKgPiWmOQ1RcH4D8hFTdnmHZ4M\nPLe99WYOjQKBgEe4Ap9PyGIC/xA5i8C34lLD8IqhN193AT3NYUR8GnajTtX3QXMG\nE1qGKjCAXUBuVmERfleGr9bTh+++XcQXvPlAf7BaagDoPkl7jUBg37MrthHAe1Mz\nb+9O8cXDqQt/4FbFenIVlnArMykdFolJN0ZBOOWszcjBcPmHuQGtkMThAoGARXy4\nm5px5mCQr5/vfaOjhoMAs47+Yh4ndN9Rd87aeTw78fK703yKSoKFWmZmzuny5ISc\nSYDXvV4CHcNTC2yWD3xShprNPNl68asyVlzmG7BMAU/akls19NX1hspA17aoOTYl\ne9bCpVPpAcZOJPUfYlAKAuDmjQInfRs2nI+twgUCgYAbaqDBrG+WX0hN/R5d4Z7+\n+QaJOuI/h4z9yB6JziTb3BujaVUEI1vC0rsNGgGzvxByvUCNlmV097F1yTID7k3f\n/0U8zQriTZmn1IevhdPoMyTWPnxVi4O7m7aMEOAXrggQPpGWFmdIITVAdA2diBnK\nCzJImqC6v9iN7Zl85GoFRA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "play-console-service-account@alpha-orbit.iam.gserviceaccount.com",
+  "client_id": "102297005485711131248",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/play-console-service-account%40alpha-orbit.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Dekr",
+    "slug": "dekr",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6CA393"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "buildNumber": "5",
+      "bundleIdentifier": "com.pittsdev.dekr",
+      "googleServicesFile": "./requirement_files/GoogleService-Info.plist",
+      "icon": "./assets/images/icon.png",
+      "backgroundColor": "#6CA393"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#6CA393"
+      },
+      "package": "com.pittsdev.dekr",
+      "googleServicesFile": "./requirement_files/google-services.json",
+      "supportsTablet": true
+    },
+    "plugins": [
+      "@react-native-google-signin/google-signin",
+      "expo-router",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ],
+    "scheme": "com.pittsdev.dekr",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7f9391d6-b424-48a4-bfd9-07330787a04a"
+      }
+    },
+    "owner": "xerophilus"
+  }
+}

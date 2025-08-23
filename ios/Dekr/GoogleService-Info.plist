@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>152969284019-j97bp7t54c0p70i50t0tltt971c42qck.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.152969284019-j97bp7t54c0p70i50t0tltt971c42qck</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>152969284019-ei2hlpq0o5uugsgeoifcoetbsfo02st6.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCJ-wXAsvsaokhtu5H4JqDsttDB9YGHRyA</string>
+	<key>GCM_SENDER_ID</key>
+	<string>152969284019</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.pittsdev.dekr</string>
+	<key>PROJECT_ID</key>
+	<string>alpha-orbit</string>
+	<key>STORAGE_BUCKET</key>
+	<string>alpha-orbit.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:152969284019:ios:8fdacd31b783f2c32623c6</string>
+	<key>DATABASE_URL</key>
+	<string>https://alpha-orbit-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>
