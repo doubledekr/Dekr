@@ -1,0 +1,217 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isFriend(userId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/friends/$(request.auth.uid + '_' + userId)) &&
+        get(/databases/$(database)/documents/friends/$(request.auth.uid + '_' + userId)).data.status == 'accepted';
+    }
+    
+    function isCollaborator(collaborators) {
+      return isAuthenticated() && request.auth.uid in collaborators;
+    }
+    
+    function canReadBasedOnVisibility(visibility, ownerId, collaborators) {
+      return visibility == 'public' ||
+        (visibility == 'friends' && (isOwner(ownerId) || isFriend(ownerId))) ||
+        (visibility == 'private' && (isOwner(ownerId) || isCollaborator(collaborators)));
+    }
+
+    // Users collection - profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.isPublic == true || 
+         isOwner(userId) || 
+         isFriend(userId));
+      allow write: if isOwner(userId);
+    }
+
+    // Decks collection
+    match /decks/{deckId} {
+      allow read: if isAuthenticated() && 
+        canReadBasedOnVisibility(resource.data.visibility, resource.data.ownerId, resource.data.collaborators);
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.ownerId == request.auth.uid;
+      
+      allow update: if isAuthenticated() && 
+        (isOwner(resource.data.ownerId) || isCollaborator(resource.data.collaborators));
+      
+      allow delete: if isAuthenticated() && isOwner(resource.data.ownerId);
+    }
+
+    // Card notes collection with subcollections
+    match /card_notes/{cardId} {
+      // Allow reading the card document itself if authenticated
+      allow read: if isAuthenticated();
+      
+      // Notes subcollection
+      match /notes/{noteId} {
+        allow read: if isAuthenticated() && 
+          canReadBasedOnVisibility(resource.data.visibility, resource.data.authorId, []);
+        
+        allow create: if isAuthenticated() && 
+          request.resource.data.authorId == request.auth.uid;
+        
+        allow update: if isAuthenticated() && isOwner(resource.data.authorId);
+        allow delete: if isAuthenticated() && isOwner(resource.data.authorId);
+        
+        // Comments on notes
+        match /comments/{commentId} {
+          allow read: if isAuthenticated();
+          allow create: if isAuthenticated() && 
+            request.resource.data.authorId == request.auth.uid;
+          allow update: if isAuthenticated() && isOwner(resource.data.authorId);
+          allow delete: if isAuthenticated() && isOwner(resource.data.authorId);
+        }
+        
+        // Likes on notes
+        match /likes/{likeId} {
+          allow read: if isAuthenticated();
+          allow create, delete: if isAuthenticated() && 
+            request.resource.data.userId == request.auth.uid;
+        }
+      }
+    }
+
+    // Shares collection
+    match /shares/{shareId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.sharedWith == null || 
+         request.auth.uid in resource.data.sharedWith ||
+         isOwner(resource.data.sharedBy));
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.sharedBy == request.auth.uid;
+      
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.sharedBy);
+    }
+
+    // Friends collection
+    match /friends/{friendId} {
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == resource.data.fromUserId || 
+         request.auth.uid == resource.data.toUserId);
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.fromUserId == request.auth.uid;
+      
+      allow update: if isAuthenticated() && 
+        (request.auth.uid == resource.data.fromUserId || 
+         request.auth.uid == resource.data.toUserId);
+      
+      allow delete: if isAuthenticated() && 
+        (request.auth.uid == resource.data.fromUserId || 
+         request.auth.uid == resource.data.toUserId);
+    }
+
+    // Strategies collection
+    match /strategies/{strategyId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.isPublic == true || isOwner(resource.data.ownerId));
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.ownerId == request.auth.uid;
+      
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.ownerId);
+      
+      // Backtests subcollection
+      match /backtests/{backtestId} {
+        allow read, write: if isAuthenticated() && 
+          isOwner(get(/databases/$(database)/documents/strategies/$(strategyId)).data.ownerId);
+      }
+    }
+
+    // Alerts collection - user-specific
+    match /alerts/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // Individual alert items
+      match /items/{alertId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Challenges collection
+    match /challenges/{challengeId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.isPublic == true || 
+         isOwner(resource.data.creatorId) ||
+         exists(/databases/$(database)/documents/challenges/$(challengeId)/participants/$(request.auth.uid)));
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.creatorId == request.auth.uid;
+      
+      allow update: if isAuthenticated() && isOwner(resource.data.creatorId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.creatorId);
+      
+      // Participants subcollection
+      match /participants/{participantId} {
+        allow read: if isAuthenticated() && 
+          (isOwner(resource.data.userId) ||
+           isOwner(get(/databases/$(database)/documents/challenges/$(challengeId)).data.creatorId));
+        
+        allow create: if isAuthenticated() && 
+          request.resource.data.userId == request.auth.uid;
+        
+        allow update: if isAuthenticated() && 
+          (isOwner(resource.data.userId) ||
+           isOwner(get(/databases/$(database)/documents/challenges/$(challengeId)).data.creatorId));
+      }
+      
+      // Results subcollection - only Cloud Functions can write
+      match /results/{resultId} {
+        allow read: if isAuthenticated() && 
+          exists(/databases/$(database)/documents/challenges/$(challengeId)/participants/$(request.auth.uid));
+        
+        // Only Cloud Functions can write results
+        allow write: if false;
+      }
+    }
+
+    // Newsletters collection - user-specific
+    match /newsletters/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // Individual newsletter items
+      match /items/{newsletterId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Notifications collection - user-specific
+    match /notifications/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // Individual notification items
+      match /items/{notificationId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Analytics and admin collections - restrict access
+    match /analytics/{document=**} {
+      allow read, write: if false; // Only Cloud Functions
+    }
+    
+    match /admin/{document=**} {
+      allow read, write: if false; // Only admin users via Cloud Functions
+    }
+    
+    // System collections for metadata
+    match /system/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only Cloud Functions
+    }
+  }
+}

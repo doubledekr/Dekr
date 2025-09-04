@@ -28,8 +28,7 @@
         "backgroundColor": "#6CA393"
       },
       "package": "com.pittsdev.dekr",
-      "googleServicesFile": "./requirement_files/google-services.json",
-      "supportsTablet": true
+      "googleServicesFile": "./requirement_files/google-services.json"
     },
     "plugins": [
       "@react-native-google-signin/google-signin",

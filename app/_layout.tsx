@@ -13,9 +13,11 @@ import { AuthProvider } from '@/providers/AuthProvider';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, requestNotificationPermissions, checkNotificationPermissions } from '../services/notifications';
+import { notificationHandler } from '../src/services/notificationHandler';
 import { logScreenView } from '../services/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LayoutProvider } from '../contexts/LayoutContext';
+import { EducationProvider } from '../contexts/EducationContext';
 
 const theme = {
   ...MD3LightTheme,
@@ -86,6 +88,80 @@ function RootLayoutNav() {
           presentation: 'modal'
         }}
       />
+      <Stack.Screen
+        name="DeckDetail"
+        options={{
+          headerShown: true,
+          title: 'Deck Details',
+        }}
+      />
+      <Stack.Screen
+        name="CreateDeck"
+        options={{
+          headerShown: true,
+          presentation: 'modal',
+          title: 'Create Deck',
+        }}
+      />
+      <Stack.Screen
+        name="AddToDeck"
+        options={{
+          headerShown: true,
+          presentation: 'modal',
+          title: 'Add to Deck',
+        }}
+      />
+      <Stack.Screen
+        name="CardDetail"
+        options={{
+          headerShown: true,
+          title: 'Asset Details',
+        }}
+      />
+      <Stack.Screen
+        name="ShareCode"
+        options={{
+          headerShown: true,
+          title: 'Enter Share Code',
+        }}
+      />
+      <Stack.Screen
+        name="UserProfile"
+        options={{
+          headerShown: true,
+          title: 'User Profile',
+        }}
+      />
+      <Stack.Screen
+        name="StrategyEditor"
+        options={{
+          headerShown: true,
+          presentation: 'modal',
+          title: 'Strategy Editor',
+        }}
+      />
+      <Stack.Screen
+        name="BacktestScreen"
+        options={{
+          headerShown: true,
+          title: 'Backtest Results',
+        }}
+      />
+      <Stack.Screen
+        name="CreateChallenge"
+        options={{
+          headerShown: true,
+          presentation: 'modal',
+          title: 'Create Challenge',
+        }}
+      />
+      <Stack.Screen
+        name="ChallengeDetail"
+        options={{
+          headerShown: true,
+          title: 'Challenge Details',
+        }}
+      />
     </Stack>
   );
 }
@@ -152,6 +228,9 @@ export default function RootLayout() {
           // Handle notification interaction here
         });
 
+        // Initialize notification handler
+        await notificationHandler.initialize();
+
         // Log initial screen view
         logScreenView('App Launch');
 
@@ -176,9 +255,11 @@ export default function RootLayout() {
         <AuthProvider>
           <PaperProvider theme={theme}>
             <LayoutProvider>
-              <OnboardingProvider>
-                <RootLayoutNav />
-              </OnboardingProvider>
+              <EducationProvider>
+                <OnboardingProvider>
+                  <RootLayoutNav />
+                </OnboardingProvider>
+              </EducationProvider>
             </LayoutProvider>
           </PaperProvider>
         </AuthProvider>

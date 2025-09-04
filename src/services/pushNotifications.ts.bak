@@ -1,0 +1,355 @@
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { firestore, auth } from '../../services/firebase-platform';
+
+// Configure notification behavior
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+export interface PushNotificationSettings {
+  deviceToken: string;
+  deviceType: 'ios' | 'android' | 'web';
+  enabled: boolean;
+  tradingAlerts: boolean;
+  strategyAlerts: boolean;
+  performanceAlerts: boolean;
+  riskAlerts: boolean;
+  quietHours: {
+    enabled: boolean;
+    start: string; // HH:MM format
+    end: string;   // HH:MM format
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+class PushNotificationService {
+  private static instance: PushNotificationService;
+  private currentToken: string | null = null;
+
+  static getInstance(): PushNotificationService {
+    if (!PushNotificationService.instance) {
+      PushNotificationService.instance = new PushNotificationService();
+    }
+    return PushNotificationService.instance;
+  }
+
+  /**
+   * Initialize push notifications and register device token
+   */
+  async initialize(): Promise<string | null> {
+    try {
+      // Check if device supports push notifications
+      if (!Device.isDevice) {
+        console.warn('Push notifications are not supported on simulator/emulator');
+        return null;
+      }
+
+      // Request permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        console.warn('Push notification permissions not granted');
+        return null;
+      }
+
+      // Get push token
+      const token = await this.getExpoPushToken();
+      if (token) {
+        this.currentToken = token;
+        await this.saveDeviceToken(token);
+      }
+
+      return token;
+    } catch (error) {
+      console.error('Error initializing push notifications:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get Expo push token
+   */
+  private async getExpoPushToken(): Promise<string | null> {
+    try {
+      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      return token;
+    } catch (error) {
+      console.error('Error getting Expo push token:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Save device token to Firestore
+   */
+  private async saveDeviceToken(token: string): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const deviceType = Platform.OS as 'ios' | 'android';
+      const now = new Date();
+
+      // Get existing settings
+      const settingsRef = doc(firestore, 'users', user.uid, 'settings', 'push');
+      const existingDoc = await getDoc(settingsRef);
+      const existingSettings = existingDoc.exists() ? existingDoc.data() : {};
+
+      const settings: PushNotificationSettings = {
+        deviceToken: token,
+        deviceType,
+        enabled: true,
+        tradingAlerts: true,
+        strategyAlerts: true,
+        performanceAlerts: true,
+        riskAlerts: true,
+        quietHours: {
+          enabled: false,
+          start: '22:00',
+          end: '08:00',
+        },
+        createdAt: existingSettings.createdAt || now,
+        updatedAt: now,
+        ...existingSettings, // Preserve existing settings
+        deviceToken: token, // Always update token
+        updatedAt: now,     // Always update timestamp
+      };
+
+      await setDoc(settingsRef, settings);
+      console.log('Device token saved successfully');
+    } catch (error) {
+      console.error('Error saving device token:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update notification settings
+   */
+  async updateSettings(updates: Partial<PushNotificationSettings>): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const settingsRef = doc(firestore, 'users', user.uid, 'settings', 'push');
+      const existingDoc = await getDoc(settingsRef);
+      
+      if (!existingDoc.exists()) {
+        throw new Error('Push settings not found. Please initialize push notifications first.');
+      }
+
+      const currentSettings = existingDoc.data() as PushNotificationSettings;
+      const updatedSettings = {
+        ...currentSettings,
+        ...updates,
+        updatedAt: new Date(),
+      };
+
+      await setDoc(settingsRef, updatedSettings);
+      console.log('Push notification settings updated');
+    } catch (error) {
+      console.error('Error updating push settings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current notification settings
+   */
+  async getSettings(): Promise<PushNotificationSettings | null> {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const settingsRef = doc(firestore, 'users', user.uid, 'settings', 'push');
+      const settingsDoc = await getDoc(settingsRef);
+      
+      if (!settingsDoc.exists()) {
+        return null;
+      }
+
+      const settings = settingsDoc.data() as PushNotificationSettings;
+      return {
+        ...settings,
+        createdAt: settings.createdAt instanceof Date ? settings.createdAt : new Date(settings.createdAt),
+        updatedAt: settings.updatedAt instanceof Date ? settings.updatedAt : new Date(settings.updatedAt),
+      };
+    } catch (error) {
+      console.error('Error getting push settings:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Send local notification (for testing)
+   */
+  async sendLocalNotification(title: string, body: string, data?: any): Promise<void> {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          data: data || {},
+          sound: true,
+        },
+        trigger: null, // Send immediately
+      });
+    } catch (error) {
+      console.error('Error sending local notification:', error);
+    }
+  }
+
+  /**
+   * Handle notification received while app is running
+   */
+  addNotificationReceivedListener(handler: (notification: Notifications.Notification) => void) {
+    return Notifications.addNotificationReceivedListener(handler);
+  }
+
+  /**
+   * Handle notification tapped
+   */
+  addNotificationResponseReceivedListener(handler: (response: Notifications.NotificationResponse) => void) {
+    return Notifications.addNotificationResponseReceivedListener(handler);
+  }
+
+  /**
+   * Get current push token
+   */
+  getCurrentToken(): string | null {
+    return this.currentToken;
+  }
+
+  /**
+   * Check if notifications are enabled for user
+   */
+  async areNotificationsEnabled(): Promise<boolean> {
+    const settings = await this.getSettings();
+    return settings?.enabled || false;
+  }
+
+  /**
+   * Check if it's quiet hours
+   */
+  async isQuietHours(): Promise<boolean> {
+    const settings = await this.getSettings();
+    if (!settings?.quietHours.enabled) {
+      return false;
+    }
+
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    const { start, end } = settings.quietHours;
+    
+    // Handle overnight quiet hours (e.g., 22:00 to 08:00)
+    if (start > end) {
+      return currentTime >= start || currentTime <= end;
+    } else {
+      return currentTime >= start && currentTime <= end;
+    }
+  }
+
+  /**
+   * Test push notification
+   */
+  async testNotification(): Promise<void> {
+    try {
+      await this.sendLocalNotification(
+        'Test Notification',
+        'This is a test notification from Dekr',
+        { type: 'test' }
+      );
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+    }
+  }
+}
+
+// Export singleton instance
+export const pushNotificationService = PushNotificationService.getInstance();
+
+// Hook for using push notifications in React components
+import { useState, useEffect, useCallback } from 'react';
+
+export const usePushNotifications = () => {
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [settings, setSettings] = useState<PushNotificationSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const initialize = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = await pushNotificationService.initialize();
+      if (token) {
+        setIsInitialized(true);
+        const currentSettings = await pushNotificationService.getSettings();
+        setSettings(currentSettings);
+      }
+    } catch (err: any) {
+      console.error('Error initializing push notifications:', err);
+      setError(err.message || 'Failed to initialize push notifications');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateSettings = useCallback(async (updates: Partial<PushNotificationSettings>) => {
+    try {
+      await pushNotificationService.updateSettings(updates);
+      const updatedSettings = await pushNotificationService.getSettings();
+      setSettings(updatedSettings);
+    } catch (err: any) {
+      console.error('Error updating push settings:', err);
+      setError(err.message || 'Failed to update push settings');
+      throw err;
+    }
+  }, []);
+
+  const sendTestNotification = useCallback(async () => {
+    try {
+      await pushNotificationService.testNotification();
+    } catch (err: any) {
+      console.error('Error sending test notification:', err);
+      setError(err.message || 'Failed to send test notification');
+      throw err;
+    }
+  }, []);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  return {
+    isInitialized,
+    settings,
+    loading,
+    error,
+    updateSettings,
+    sendTestNotification,
+    reinitialize: initialize,
+  };
+};

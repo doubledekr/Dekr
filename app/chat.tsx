@@ -11,7 +11,7 @@ import {
 import { Text, useTheme, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Message, sendMessage } from '../services/chat-service';
-import * as Haptics from 'expo-haptics';
+import { safeHapticImpact } from '../utils/haptics';
 import { Stack, router } from 'expo-router';
 
 export default function ChatScreen() {
@@ -37,7 +37,7 @@ export default function ChatScreen() {
 
     const userMessage = inputMessage.trim();
     setInputMessage('');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    safeHapticImpact();
 
     // Add user message to chat
     setMessages(prevMessages => [...prevMessages, { role: 'user' as const, content: userMessage }]);

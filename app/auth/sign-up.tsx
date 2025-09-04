@@ -5,7 +5,8 @@ import { useDispatch } from 'react-redux';
 import { Button, Text, TextInput, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { signUpWithEmail, signInWithGoogle } from '../../services/firebase';
-import { setUser, setError, setLoading } from '../../store/slices/authSlice';
+import { setUser, setError, setLoading, setHasCompletedOnboarding } from '../../store/slices/authSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen() {
   const theme = useTheme();
@@ -40,6 +41,35 @@ export default function SignUpScreen() {
     }
   };
 
+  const handleDemoSignIn = async () => {
+    try {
+      dispatch(setLoading(true));
+      
+      // Create a mock demo user
+      const demoUser = {
+        uid: 'demo-user-123',
+        email: 'demo@dekr.app',
+        displayName: 'Demo User',
+        photoURL: null,
+        emailVerified: true,
+      };
+      
+      // Set demo user in Redux store
+      dispatch(setUser(demoUser));
+      
+      // Mark onboarding as completed for demo
+      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+      dispatch(setHasCompletedOnboarding(true));
+      
+      // Navigate to main app
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      dispatch(setError('Demo sign-in failed'));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
   const handleGoogleSignUp = async () => {
     try {
       dispatch(setLoading(true));
@@ -64,6 +94,24 @@ export default function SignUpScreen() {
         </Text>
 
         <View style={styles.form}>
+          <Button
+            mode="contained"
+            onPress={handleDemoSignIn}
+            icon={({ size, color }) => (
+              <MaterialCommunityIcons name="account-circle" size={size} color={color} />
+            )}
+            style={[styles.button, styles.demoButton]}
+            buttonColor="#4CAF50"
+            textColor="white">
+            🚀 Try Demo Account
+          </Button>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text variant="bodyMedium" style={styles.dividerText}>or create your account</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <TextInput
             label="Email"
             value={email}
@@ -171,6 +219,14 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 8,
+  },
+  demoButton: {
+    marginBottom: 8,
+    elevation: 3,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   divider: {
     flexDirection: 'row',

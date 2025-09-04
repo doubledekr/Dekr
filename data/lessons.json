@@ -1,0 +1,594 @@
+[
+  {
+    "id": 1,
+    "title": "Stage 1: Core Money Skills",
+    "description": "Learn the essential basics of money and finance",
+    "requiredXP": 0,
+    "lessons": [
+      {
+        "id": 1,
+        "title": "Lesson 1: What is Money?",
+        "description": "Understanding the history and functions of money in society",
+        "duration": 10,
+        "xpReward": 20,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_1_1.mp3",
+            "audioTitle": "What is Money?",
+            "transcript": "Imagine stepping into a grand medieval marketplace at dawn, the first beams of sunlight dancing off copper coins piled high on wooden tables. Farmers wheeled carts laden with fresh produce—crimson apples, golden wheat bundles, and earthenware jugs—while artisans displayed handcrafted wares in neat stalls. In one corner, a shepherd brandished a fine fleece; in another, a cobbler revealed a pair of sturdy leather boots. Each trade was a delicate negotiation.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "What is Money?",
+            "content": "Imagine stepping into a grand medieval marketplace at dawn, the first beams of sunlight dancing off copper coins piled high on wooden tables. Farmers wheeled carts laden with fresh produce—crimson apples, golden wheat bundles, and earthenware jugs—while artisans displayed handcrafted wares in neat stalls. In one corner, a shepherd brandished a fine fleece; in another, a cobbler revealed a pair of sturdy leather boots. Each trade was a delicate negotiation."
+          },
+          {
+            "type": "text",
+            "content": "Enter money—an elegant solution born from necessity and human ingenuity. Early societies discovered that stamping metal coins with a royal insignia created universal trust: one coin became an agreed token of value, instantly recognizable and widely accepted. Picture that same shepherd, now carrying only a leather pouch filled with lightweight coins instead of a flock of sheep. The exchange transformed from laborious bartering to a simple swap of tokens."
+          },
+          {
+            "type": "tap-to-reveal",
+            "title": "Functions of Money",
+            "hiddenContent": [
+              "Medium of Exchange: Used to buy and sell things",
+              "Store of Value: Holds its worth over time",
+              "Unit of Account: Measures the value of goods"
+            ]
+          },
+          {
+            "type": "multiple-choice",
+            "question": {
+              "questionText": "Which of these is NOT a function of money?",
+              "options": [
+                "Medium of exchange",
+                "Store of value",
+                "Source of happiness",
+                "Unit of account"
+              ],
+              "correctAnswer": "Source of happiness",
+              "explanation": "Money serves as a medium of exchange, store of value, and unit of account. While money can buy things that may bring happiness, being a source of happiness is not a primary function of money."
+            }
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Lesson 2: How Banks Work",
+        "description": "Understanding the role of banks in the financial system",
+        "duration": 10,
+        "xpReward": 25,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_1_2.mp3",
+            "audioTitle": "How Banks Work",
+            "transcript": "Banks are the grand beehives of modern finance—vault-like sanctuaries where your money tokens rest and grow. But to see their full power, let's drill down.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "How Banks Work",
+            "content": "Banks are the grand beehives of modern finance—vault-like sanctuaries where your money tokens rest and grow. When you deposit $500 into a checking or savings account, the bank holds onto that money, protecting it from loss or theft. Under the hood, your deposit becomes a liability on the bank's balance sheet, while the cash itself may be stored in vaults or invested in short-term government securities."
+          },
+          {
+            "type": "tap-to-reveal",
+            "title": "Banking Services",
+            "hiddenContent": [
+              "Safekeeping: Banks protect your deposits from loss or theft",
+              "Lending: Banks lend out deposits to borrowers at higher interest rates",
+              "Payment Processing: Banks facilitate transfers and payments",
+              "Investment Services: Many banks offer investment products and advice"
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Lesson 3: Saving vs. Spending",
+        "description": "Learning the balance between saving money and spending wisely",
+        "duration": 8,
+        "xpReward": 20,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_1_3.mp3",
+            "audioTitle": "Saving vs. Spending",
+            "transcript": "Every financial decision boils down to a fundamental choice: consume now or preserve for later. This tension between immediate gratification and future security shapes every budget, every purchase, and every financial goal.",
+            "audioDuration": 100
+          },
+          {
+            "type": "text",
+            "title": "The Saving vs. Spending Balance",
+            "content": "Every financial decision boils down to a fundamental choice: consume now or preserve for later. This tension between immediate gratification and future security shapes every budget, every purchase, and every financial goal. The key is finding the right balance for your situation and goals."
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Lesson 4: Credit and Debt",
+        "description": "Understanding how credit works and managing debt responsibly",
+        "duration": 12,
+        "xpReward": 30,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_1_4.mp3",
+            "audioTitle": "Credit and Debt",
+            "transcript": "Credit is essentially borrowed money—a promise to pay back what you've received, usually with interest. When used wisely, credit can help you achieve goals faster. When misused, it can become a financial burden that limits your future options.",
+            "audioDuration": 130
+          },
+          {
+            "type": "text",
+            "title": "Understanding Credit",
+            "content": "Credit is essentially borrowed money—a promise to pay back what you've received, usually with interest. When used wisely, credit can help you achieve goals faster, like buying a home or starting a business. When misused, it can become a financial burden that limits your future options."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Lesson 5: Budgeting Basics",
+        "description": "Creating and maintaining a personal budget",
+        "duration": 15,
+        "xpReward": 35,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_1_5.mp3",
+            "audioTitle": "Budgeting Basics",
+            "transcript": "A budget is your financial roadmap—a plan that helps you allocate your income toward expenses, savings, and goals. Without a budget, it's easy to overspend and difficult to save for important objectives.",
+            "audioDuration": 140
+          },
+          {
+            "type": "text",
+            "title": "Why Budget?",
+            "content": "A budget is your financial roadmap—a plan that helps you allocate your income toward expenses, savings, and goals. Without a budget, it's easy to overspend and difficult to save for important objectives like emergencies, vacations, or retirement."
+          },
+          {
+            "type": "tap-to-reveal",
+            "title": "The 50/30/20 Rule",
+            "hiddenContent": [
+              "50% for Needs: Essential expenses like rent, utilities, groceries, minimum debt payments",
+              "30% for Wants: Entertainment, dining out, hobbies, non-essential shopping",
+              "20% for Savings & Debt: Emergency fund, retirement savings, extra debt payments"
+            ]
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Lesson 6: Emergency Funds",
+        "description": "Building financial security with emergency savings",
+        "duration": 10,
+        "xpReward": 25,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_1_6.mp3",
+            "audioTitle": "Emergency Funds",
+            "transcript": "An emergency fund is your financial safety net—money set aside specifically for unexpected expenses or income disruptions. It's the foundation of financial security and peace of mind.",
+            "audioDuration": 110
+          },
+          {
+            "type": "text",
+            "title": "Emergency Funds",
+            "content": "An emergency fund is your financial safety net—money set aside specifically for unexpected expenses or income disruptions. It's the foundation of financial security and peace of mind, protecting you from having to rely on credit cards or loans when life throws you a curveball."
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Lesson 7: Insurance Basics",
+        "description": "Understanding different types of insurance and their importance",
+        "duration": 12,
+        "xpReward": 30,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_1_7.mp3",
+            "audioTitle": "Insurance Basics",
+            "transcript": "Insurance is a contract where you pay regular premiums to transfer financial risk to an insurance company. In exchange, they promise to cover certain losses or expenses if specific events occur.",
+            "audioDuration": 125
+          },
+          {
+            "type": "text",
+            "title": "What is Insurance?",
+            "content": "Insurance is a contract where you pay regular premiums to transfer financial risk to an insurance company. In exchange, they promise to cover certain losses or expenses if specific events occur. It's a way to protect yourself from potentially devastating financial losses."
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Lesson 8: Financial Goals",
+        "description": "Setting and achieving short-term and long-term financial objectives",
+        "duration": 10,
+        "xpReward": 25,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_1_8.mp3",
+            "audioTitle": "Financial Goals",
+            "transcript": "Financial goals give direction and purpose to your money management. Without clear goals, it's difficult to make informed decisions about spending, saving, and investing.",
+            "audioDuration": 115
+          },
+          {
+            "type": "text",
+            "title": "Setting Financial Goals",
+            "content": "Financial goals give direction and purpose to your money management. Without clear goals, it's difficult to make informed decisions about spending, saving, and investing. Goals help you prioritize and stay motivated on your financial journey."
+          },
+          {
+            "type": "tap-to-reveal",
+            "title": "SMART Goals Framework",
+            "hiddenContent": [
+              "Specific: Clearly define what you want to achieve",
+              "Measurable: Include numbers so you can track progress",
+              "Achievable: Set realistic goals based on your situation",
+              "Relevant: Ensure goals align with your values and priorities",
+              "Time-bound: Set deadlines to create urgency and accountability"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Stage 2: Investment Fundamentals",
+    "description": "Learn advanced concepts about investing and building wealth",
+    "requiredXP": 200,
+    "lessons": [
+      {
+        "id": 1,
+        "title": "Lesson 9: What is Investing?",
+        "description": "Understanding the concept and mechanics of investing",
+        "duration": 12,
+        "xpReward": 40,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_1.mp3",
+            "audioTitle": "What is Investing?",
+            "transcript": "Investing transforms dormant tokens into active agents of economic growth. While saving locks coins in vaults, investing channels those coins into enterprises, projects, and ideas—securing ownership stakes or loan claims that generate returns. From the Dutch East India Company's first publicly traded shares in 1602, which funded spice voyages across treacherous seas, to today's global equity markets, investing has democratized wealth creation.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "What is Investing?",
+            "content": "Investing transforms dormant money into active agents of economic growth. While saving locks money in accounts, investing channels that money into enterprises, projects, and ideas—securing ownership stakes or loan claims that generate returns. From the Dutch East India Company's first publicly traded shares in 1602, which funded spice voyages across treacherous seas, to today's global equity markets, investing has democratized wealth creation."
+          },
+          {
+            "type": "tap-to-reveal",
+            "title": "Types of Investments",
+            "hiddenContent": [
+              "Stocks: Ownership shares in companies",
+              "Bonds: Loans to governments or corporations",
+              "Real Estate: Property investments",
+              "Mutual Funds: Professionally managed portfolios",
+              "ETFs: Exchange-traded funds that track indexes"
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Lesson 10: Time Value of Money",
+        "description": "Understanding how money's value changes over time",
+        "duration": 10,
+        "xpReward": 35,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_2.mp3",
+            "audioTitle": "Time Value of Money",
+            "transcript": "Every dollar's journey through time is governed by compounding growth and inflation decay. Imagine money as saplings in a forest. Planting seeds today means the earliest trees will tower by mid‑life; planting the same seeds a decade later yields understory shrubs. Delay steals canopy height.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "Time Value of Money",
+            "content": "Every dollar's journey through time is governed by compounding growth and inflation decay. The fundamental principle is that money available today is worth more than the same amount in the future due to its potential earning capacity."
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Lesson 11: Risk vs. Reward",
+        "description": "Understanding the relationship between investment risk and potential returns",
+        "duration": 15,
+        "xpReward": 40,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_3.mp3",
+            "audioTitle": "Risk vs. Reward",
+            "transcript": "Investing is a balancing act between the potential for higher returns and the likelihood of volatility and loss. Over the past century, equities have outpaced bonds by roughly 6.7% per year—the equity risk premium—compensating investors for enduring market swings.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "Risk vs. Reward",
+            "content": "Investing is a balancing act between the potential for higher returns and the likelihood of volatility and loss. Over the past century, equities have outpaced bonds by roughly 6.7% per year—the equity risk premium—compensating investors for enduring market swings."
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Lesson 12: Stocks vs. Bonds vs. Cash",
+        "description": "Comparing the key characteristics of major asset classes",
+        "duration": 12,
+        "xpReward": 35,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_4.mp3",
+            "audioTitle": "Stocks vs. Bonds vs. Cash",
+            "transcript": "Building a resilient portfolio begins with understanding the three foundational asset classes—equities (stocks), fixed‑income (bonds), and cash equivalents. Equities have delivered roughly 10% annualized returns since 1926 but exhibit ~15% volatility. Bonds have returned about 5.5% with 4.5–5% volatility, providing income and dampening swings.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "Asset Classes Comparison",
+            "content": "Building a resilient portfolio begins with understanding the three foundational asset classes—equities (stocks), fixed‑income (bonds), and cash equivalents. Each serves different purposes in your investment strategy."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Lesson 13: Inflation and Your Money",
+        "description": "Understanding how inflation affects purchasing power over time",
+        "duration": 10,
+        "xpReward": 35,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_5.mp3",
+            "audioTitle": "Inflation and Your Money",
+            "transcript": "Inflation—the sustained rise in prices—acts like a slow leak in your wallet's lifeboat, quietly eroding the purchasing power of each dollar. To navigate this, you need to understand how inflation is measured, the tools designed to protect against it, and strategies for positioning your portfolio.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "Understanding Inflation",
+            "content": "Inflation—the sustained rise in prices—acts like a slow leak in your wallet's lifeboat, quietly eroding the purchasing power of each dollar. Understanding inflation is crucial for long-term financial planning."
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Lesson 14: Diversification",
+        "description": "Learning how to spread investment risk across different assets",
+        "duration": 10,
+        "xpReward": 35,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_6.mp3",
+            "audioTitle": "Diversification",
+            "transcript": "Diversification is the practice of spreading your investments across a variety of assets so that the poor performance of any single holding has less impact on your overall portfolio. By combining uncorrelated or negatively correlated assets, you reduce unsystematic risk without sacrificing expected returns.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "The Power of Diversification",
+            "content": "Diversification is the practice of spreading your investments across a variety of assets so that the poor performance of any single holding has less impact on your overall portfolio. It's often called the only 'free lunch' in investing."
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Lesson 15: What Is a Stock Market?",
+        "description": "Understanding how stock markets function and their role in the economy",
+        "duration": 12,
+        "xpReward": 40,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_7.mp3",
+            "audioTitle": "What Is a Stock Market?",
+            "transcript": "A stock market is a high-speed marketplace where buyers and sellers exchange ownership stakes (shares) in publicly traded companies. From its origin under a buttonwood tree in 1792 to today's electronic networks matching over 10 billion share trades daily, markets allocate capital, set prices, and enable economic growth.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "Stock Market Basics",
+            "content": "A stock market is a high-speed marketplace where buyers and sellers exchange ownership stakes (shares) in publicly traded companies. It's where companies raise capital and investors build wealth."
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Lesson 16: Understanding Dividends",
+        "description": "Learning about dividend income and its role in investment returns",
+        "duration": 10,
+        "xpReward": 35,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_8.mp3",
+            "audioTitle": "Understanding Dividends",
+            "transcript": "Dividends are the periodic cash payouts that companies distribute to their shareholders from corporate profits. While many companies—particularly high-growth tech firms—reinvest profits into expansion, mature businesses like consumer staples and utilities often share 40–60% of earnings with stockholders.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "What Are Dividends?",
+            "content": "Dividends are the periodic cash payouts that companies distribute to their shareholders from corporate profits. They represent a way for companies to share their success with investors."
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Lesson 17: Dollar-Cost Averaging",
+        "description": "Learning a systematic approach to investing over time",
+        "duration": 8,
+        "xpReward": 30,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_9.mp3",
+            "audioTitle": "Dollar-Cost Averaging",
+            "transcript": "Dollar-cost averaging is an investment strategy where you invest a fixed amount of money at regular intervals, regardless of market conditions. This approach can help reduce the impact of market volatility on your investments.",
+            "audioDuration": 100
+          },
+          {
+            "type": "text",
+            "title": "Dollar-Cost Averaging Strategy",
+            "content": "Dollar-cost averaging is an investment strategy where you invest a fixed amount of money at regular intervals, regardless of market conditions. This systematic approach can help smooth out market volatility over time."
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Lesson 18: Index Funds vs. Active Funds",
+        "description": "Comparing passive and active investment strategies",
+        "duration": 10,
+        "xpReward": 35,
+        "content": [
+          {
+            "type": "text",
+            "title": "Index Funds vs. Active Funds",
+            "content": "Index funds passively track market indexes with low fees, while active funds employ managers who try to beat the market through stock selection and timing. Understanding the differences can help you choose the right approach for your goals."
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Lesson 19: Retirement Planning",
+        "description": "Building wealth for your future retirement",
+        "duration": 15,
+        "xpReward": 45,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_11.mp3",
+            "audioTitle": "Retirement Planning",
+            "transcript": "Retirement planning is about ensuring you have enough money to maintain your desired lifestyle when you stop working. It requires understanding compound growth, tax-advantaged accounts, and long-term investment strategies.",
+            "audioDuration": 150
+          },
+          {
+            "type": "text",
+            "title": "Planning for Retirement",
+            "content": "Retirement planning is about ensuring you have enough money to maintain your desired lifestyle when you stop working. The earlier you start, the more time compound growth has to work in your favor."
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Lesson 20: Tax-Advantaged Accounts",
+        "description": "Understanding 401(k)s, IRAs, and other retirement accounts",
+        "duration": 12,
+        "xpReward": 40,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_12.mp3",
+            "audioTitle": "Tax-Advantaged Accounts",
+            "transcript": "Tax-advantaged accounts like 401(k)s and IRAs offer powerful ways to save for retirement while reducing your current tax burden or providing tax-free growth. Understanding these accounts is crucial for effective retirement planning.",
+            "audioDuration": 130
+          },
+          {
+            "type": "text",
+            "title": "Retirement Account Types",
+            "content": "Tax-advantaged accounts like 401(k)s and IRAs offer powerful ways to save for retirement while providing tax benefits. These accounts should be the foundation of your retirement strategy."
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Lesson 21: Real Estate Investing",
+        "description": "Understanding property investment opportunities and strategies",
+        "duration": 14,
+        "xpReward": 40,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_13.mp3",
+            "audioTitle": "Real Estate Investing",
+            "transcript": "Real estate investing involves purchasing property to generate income or appreciation. Whether through rental properties, REITs, or house flipping, real estate can provide diversification and inflation protection to your portfolio.",
+            "audioDuration": 140
+          },
+          {
+            "type": "text",
+            "title": "Real Estate as an Investment",
+            "content": "Real estate investing involves purchasing property to generate income or appreciation. It can provide portfolio diversification, inflation protection, and potential tax benefits."
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Lesson 22: International Investing",
+        "description": "Exploring global investment opportunities and considerations",
+        "duration": 10,
+        "xpReward": 35,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_14.mp3",
+            "audioTitle": "International Investing",
+            "transcript": "International investing involves purchasing securities from companies and governments outside your home country. This global diversification can provide access to faster-growing economies and reduce dependence on any single market.",
+            "audioDuration": 120
+          },
+          {
+            "type": "text",
+            "title": "Going Global with Investments",
+            "content": "International investing involves purchasing securities from companies and governments outside your home country. Global diversification can provide access to growth opportunities and reduce portfolio risk."
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Lesson 23: Alternative Investments",
+        "description": "Exploring commodities, cryptocurrencies, and other alternative assets",
+        "duration": 12,
+        "xpReward": 40,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_15.mp3",
+            "audioTitle": "Alternative Investments",
+            "transcript": "Alternative investments include assets beyond traditional stocks and bonds—commodities, cryptocurrencies, private equity, hedge funds, and collectibles. These can provide diversification benefits but often come with higher risks and fees.",
+            "audioDuration": 130
+          },
+          {
+            "type": "text",
+            "title": "Beyond Stocks and Bonds",
+            "content": "Alternative investments include assets beyond traditional stocks and bonds—commodities, cryptocurrencies, private equity, and collectibles. They can provide diversification but require careful consideration of risks and costs."
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Lesson 24: Building Your Investment Portfolio",
+        "description": "Putting it all together: creating a comprehensive investment strategy",
+        "duration": 18,
+        "xpReward": 50,
+        "content": [
+          {
+            "type": "audio",
+            "audioUrl": "/audio/lesson_2_16.mp3",
+            "audioTitle": "Building Your Investment Portfolio",
+            "transcript": "Building an investment portfolio is like constructing a house—you need a solid foundation, proper structure, and regular maintenance. Your portfolio should reflect your goals, risk tolerance, time horizon, and personal circumstances.",
+            "audioDuration": 160
+          },
+          {
+            "type": "text",
+            "title": "Creating Your Investment Strategy",
+            "content": "Building an investment portfolio requires careful consideration of your goals, risk tolerance, time horizon, and personal circumstances. A well-constructed portfolio balances growth potential with risk management."
+          },
+          {
+            "type": "tap-to-reveal",
+            "title": "Portfolio Construction Steps",
+            "hiddenContent": [
+              "Define Your Goals: Clarify what you're investing for and when you'll need the money",
+              "Assess Risk Tolerance: Understand how much volatility you can handle emotionally and financially",
+              "Choose Asset Allocation: Decide how to split between stocks, bonds, and other assets",
+              "Select Investments: Pick specific funds, stocks, or other securities",
+              "Monitor and Rebalance: Regularly review and adjust your portfolio as needed"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

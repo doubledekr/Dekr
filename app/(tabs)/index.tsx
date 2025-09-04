@@ -6,8 +6,8 @@ import { useTheme, FAB } from 'react-native-paper';
 import { MarketCard } from '../../components/MarketCard';
 import { RootState } from '../../store/store';
 import { addToWatchlist, setWatchlistItems, removeFromWatchlist } from '../../store/slices/watchlistSlice';
-import { saveToWatchlist, loadWatchlist } from '../../services/firebase';
-import * as Haptics from 'expo-haptics';
+import { saveToWatchlist, loadWatchlist } from '../../services/firebase-platform';
+import { safeHapticImpact, safeHapticNotification } from '../../utils/haptics';
 import { DeckScrollView } from '../../components/DeckScrollView';
 import { NewsCardData } from '../../components/MarketCard';
 import * as FileSystem from 'expo-file-system';
@@ -222,11 +222,14 @@ export default function HomeScreen() {
         }));
 
       console.log('Market Items Count:', marketItems.length);
+      console.log('Market Items:', marketItems.map(item => `${item.type}: ${item.symbol || item.id}`));
       
       const newsItems = response.data
         .filter((item) => item.type === 'news');
 
       console.log('News Items Count:', newsItems.length);
+      console.log('Total response.data items:', response.data.length);
+      console.log('Response data types:', response.data.map(item => item.type));
 
       // Filter market items based on deck type
       const filteredMarketItems = type === 'stocks' 
@@ -441,7 +444,7 @@ export default function HomeScreen() {
   };
 
   const handleSwipeBottom = (cardIndex: number) => {
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  safeHapticNotification();
 
   setCards(prev => {
     if (prev.length <= 1) return prev; // Avoid breaking on a single card
@@ -455,8 +458,13 @@ export default function HomeScreen() {
   };
 
   const formatPercentage = (num?: number) => {
-    if (num === undefined) return '-';
-    return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+    if (num === undefined || num === null || isNaN(num) || typeof num !== 'number') return '-';
+    try {
+      return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+    } catch (error) {
+      console.error('formatPercentage error in index.tsx:', error, 'value:', num);
+      return '-';
+    }
   };
 
   const formatLargeNumber = (num: number) => {
@@ -473,7 +481,7 @@ export default function HomeScreen() {
   };
 
   const handleChatPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    safeHapticImpact();
     router.push('/chat');
   };
 

@@ -4,11 +4,9 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { signOut } from '../../services/firebase';
 import { signOut as signOutAction } from '../../store/slices/authSlice';
 import * as ImagePicker from 'expo-image-picker';
-import firestore from '@react-native-firebase/firestore';
-import storage from '@react-native-firebase/storage';
+import { firestore } from '../../services/firebase-platform';
 import { RootState } from '../../store/store';
 
 interface UserProfile {

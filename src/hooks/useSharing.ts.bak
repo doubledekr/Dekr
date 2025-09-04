@@ -1,0 +1,376 @@
+import { useState, useCallback } from 'react';
+import { httpsCallable } from 'firebase/functions';
+import { Share, Alert, Linking } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { functions } from '../../services/firebase-platform';
+
+// Types for sharing
+interface CreateShareLinkParams {
+  type: 'deck' | 'card';
+  targetId: string;
+  permission: 'view' | 'edit';
+  expiresIn?: number; // Days until expiration
+}
+
+interface ShareLinkResult {
+  shareId: string;
+  linkCode: string;
+  deepLink: string;
+  dynamicLink: string;
+  expiresAt: string | null;
+}
+
+interface AccessShareLinkResult {
+  share: {
+    id: string;
+    type: 'deck' | 'card';
+    targetId: string;
+    itemTitle: string;
+    permission: 'view' | 'edit';
+    sharedBy: string;
+    sharedByName: string;
+    createdAt: any;
+  };
+  targetData: any;
+}
+
+interface UseCreateShareLinkResult {
+  createShareLink: (params: CreateShareLinkParams) => Promise<ShareLinkResult>;
+  loading: boolean;
+  error: string | null;
+}
+
+interface UseAccessShareLinkResult {
+  accessShareLink: (linkCode: string) => Promise<AccessShareLinkResult>;
+  loading: boolean;
+  error: string | null;
+}
+
+interface UseShareActionsResult {
+  shareViaSystem: (title: string, url: string, message?: string) => Promise<void>;
+  copyToClipboard: (text: string, successMessage?: string) => Promise<void>;
+  shareViaCode: (linkCode: string, itemTitle: string) => Promise<void>;
+  openDeepLink: (url: string) => Promise<void>;
+}
+
+// Hook to create share links
+export const useCreateShareLink = (): UseCreateShareLinkResult => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createShareLink = useCallback(async (params: CreateShareLinkParams): Promise<ShareLinkResult> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const createShareLinkFn = httpsCallable(functions, 'createShareLink');
+      const result = await createShareLinkFn(params);
+      
+      if (result.data.success) {
+        return {
+          shareId: result.data.shareId,
+          linkCode: result.data.linkCode,
+          deepLink: result.data.deepLink,
+          dynamicLink: result.data.dynamicLink,
+          expiresAt: result.data.expiresAt,
+        };
+      } else {
+        throw new Error(result.data.message || 'Failed to create share link');
+      }
+    } catch (err: any) {
+      console.error('Error creating share link:', err);
+      const errorMessage = err.message || 'Failed to create share link';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { createShareLink, loading, error };
+};
+
+// Hook to access share links
+export const useAccessShareLink = (): UseAccessShareLinkResult => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const accessShareLink = useCallback(async (linkCode: string): Promise<AccessShareLinkResult> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const accessShareLinkFn = httpsCallable(functions, 'accessShareLink');
+      const result = await accessShareLinkFn({ linkCode });
+      
+      if (result.data.success) {
+        return {
+          share: result.data.share,
+          targetData: result.data.targetData,
+        };
+      } else {
+        throw new Error(result.data.message || 'Failed to access share link');
+      }
+    } catch (err: any) {
+      console.error('Error accessing share link:', err);
+      const errorMessage = err.message || 'Failed to access share link';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { accessShareLink, loading, error };
+};
+
+// Hook for various sharing actions
+export const useShareActions = (): UseShareActionsResult => {
+  const shareViaSystem = useCallback(async (
+    title: string, 
+    url: string, 
+    message?: string
+  ): Promise<void> => {
+    try {
+      const content = {
+        title,
+        message: message || `Check out this ${title.toLowerCase()} on Dekr!`,
+        url,
+      };
+
+      const result = await Share.share(content);
+      
+      if (result.action === Share.sharedAction) {
+        console.log('Content shared successfully');
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed');
+      }
+    } catch (error) {
+      console.error('Error sharing via system:', error);
+      throw new Error('Failed to share content');
+    }
+  }, []);
+
+  const copyToClipboard = useCallback(async (
+    text: string, 
+    successMessage: string = 'Copied to clipboard!'
+  ): Promise<void> => {
+    try {
+      await Clipboard.setStringAsync(text);
+      Alert.alert('Success', successMessage);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      Alert.alert('Error', 'Failed to copy to clipboard');
+    }
+  }, []);
+
+  const shareViaCode = useCallback(async (
+    linkCode: string, 
+    itemTitle: string
+  ): Promise<void> => {
+    Alert.alert(
+      'Share via Code',
+      `Share code: ${linkCode}`,
+      [
+        {
+          text: 'Copy Code',
+          onPress: () => copyToClipboard(linkCode, 'Share code copied!'),
+        },
+        {
+          text: 'Share Code',
+          onPress: () => shareViaSystem(
+            itemTitle,
+            '',
+            `Join me on Dekr! Use code: ${linkCode} to access "${itemTitle}"`
+          ),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }, [copyToClipboard, shareViaSystem]);
+
+  const openDeepLink = useCallback(async (url: string): Promise<void> => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          'Cannot Open Link',
+          'This link cannot be opened on your device.'
+        );
+      }
+    } catch (error) {
+      console.error('Error opening deep link:', error);
+      Alert.alert('Error', 'Failed to open link');
+    }
+  }, []);
+
+  return {
+    shareViaSystem,
+    copyToClipboard,
+    shareViaCode,
+    openDeepLink,
+  };
+};
+
+// Hook for handling incoming deep links
+export const useDeepLinkHandler = () => {
+  const { accessShareLink } = useAccessShareLink();
+  const [processing, setProcessing] = useState(false);
+
+  const handleDeepLink = useCallback(async (url: string) => {
+    setProcessing(true);
+    
+    try {
+      // Parse the URL to extract share code
+      const urlObj = new URL(url);
+      const pathSegments = urlObj.pathname.split('/');
+      
+      // Check if it's a share link: /share/{linkCode}
+      if (pathSegments[1] === 'share' && pathSegments[2]) {
+        const linkCode = pathSegments[2];
+        
+        try {
+          const result = await accessShareLink(linkCode);
+          
+          // Navigate to the appropriate screen based on share type
+          if (result.share.type === 'deck') {
+            // Navigate to deck detail
+            return {
+              type: 'deck',
+              targetId: result.share.targetId,
+              data: result.targetData,
+            };
+          } else if (result.share.type === 'card') {
+            // Navigate to card detail
+            return {
+              type: 'card',
+              targetId: result.share.targetId,
+              data: result.targetData,
+            };
+          }
+        } catch (error) {
+          Alert.alert(
+            'Invalid Share Link',
+            'This share link is invalid or has expired.'
+          );
+          throw error;
+        }
+      } else {
+        throw new Error('Unknown deep link format');
+      }
+    } catch (error) {
+      console.error('Error handling deep link:', error);
+      Alert.alert(
+        'Invalid Link',
+        'This link could not be processed.'
+      );
+      throw error;
+    } finally {
+      setProcessing(false);
+    }
+  }, [accessShareLink]);
+
+  return { handleDeepLink, processing };
+};
+
+// Hook for share code input
+export const useShareCodeInput = () => {
+  const { accessShareLink } = useAccessShareLink();
+  const [loading, setLoading] = useState(false);
+
+  const processShareCode = useCallback(async (code: string) => {
+    if (!code.trim()) {
+      Alert.alert('Error', 'Please enter a share code');
+      return null;
+    }
+
+    setLoading(true);
+    
+    try {
+      const result = await accessShareLink(code.trim());
+      
+      Alert.alert(
+        'Share Found!',
+        `Found: "${result.share.itemTitle}" shared by ${result.share.sharedByName}`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Open', 
+            onPress: () => {
+              // Return the result for navigation
+              return result;
+            }
+          },
+        ]
+      );
+      
+      return result;
+    } catch (error) {
+      Alert.alert(
+        'Invalid Code',
+        'This share code is invalid or has expired. Please check the code and try again.'
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [accessShareLink]);
+
+  return { processShareCode, loading };
+};
+
+// Utility functions for share link management
+export const shareUtils = {
+  // Generate a user-friendly share message
+  generateShareMessage: (type: 'deck' | 'card', title: string, userName: string) => {
+    const typeText = type === 'deck' ? 'deck' : 'investment card';
+    return `Check out "${title}" - a ${typeText} shared by ${userName} on Dekr!`;
+  },
+
+  // Format expiration date
+  formatExpirationDate: (expiresAt: string | null) => {
+    if (!expiresAt) return 'Never expires';
+    
+    const date = new Date(expiresAt);
+    const now = new Date();
+    const diffTime = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 0) return 'Expired';
+    if (diffDays === 1) return 'Expires in 1 day';
+    if (diffDays < 7) return `Expires in ${diffDays} days`;
+    if (diffDays < 30) return `Expires in ${Math.ceil(diffDays / 7)} weeks`;
+    return `Expires in ${Math.ceil(diffDays / 30)} months`;
+  },
+
+  // Validate share code format
+  isValidShareCode: (code: string) => {
+    return /^[A-Za-z0-9_-]{12}$/.test(code);
+  },
+
+  // Extract share code from various URL formats
+  extractShareCodeFromUrl: (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      const pathSegments = urlObj.pathname.split('/');
+      
+      // Handle /share/{code} format
+      if (pathSegments[1] === 'share' && pathSegments[2]) {
+        return pathSegments[2];
+      }
+      
+      // Handle query parameter format (?code=...)
+      const codeParam = urlObj.searchParams.get('code');
+      if (codeParam) {
+        return codeParam;
+      }
+      
+      return null;
+    } catch {
+      return null;
+    }
+  },
+};

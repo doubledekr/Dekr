@@ -1,8 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import { auth, firestore } from './firebase-platform';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure notifications behavior

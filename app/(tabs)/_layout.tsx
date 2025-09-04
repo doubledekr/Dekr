@@ -31,6 +31,45 @@ export default function TabLayout() {
       />
       
       <Tabs.Screen
+        name="decks"
+        options={{
+          title: 'Decks',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'folder' : 'folder-outline'} size={size} color={color} />
+          ),
+          tabBarBadge: undefined, // TODO: Add collaboration invites count
+        }}
+      />
+      <Tabs.Screen
+        name="strategies"
+        options={{
+          title: 'Strategies',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'strategy' : 'strategy'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="alerts"
+        options={{
+          title: 'Alerts',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'bell' : 'bell-outline'} size={size} color={color} />
+          ),
+          tabBarBadge: undefined, // TODO: Add unread alerts count
+        }}
+      />
+      <Tabs.Screen
+        name="challenges"
+        options={{
+          title: 'Challenges',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'trophy' : 'trophy-outline'} size={size} color={color} />
+          ),
+          tabBarBadge: undefined, // TODO: Add active challenges count
+        }}
+      />
+      <Tabs.Screen
         name="search"
         options={{
           title: 'Search',

@@ -4,7 +4,7 @@ import { Searchbar, useTheme, Text, ActivityIndicator, Chip, Button } from 'reac
 import { MarketCard } from '../../components/MarketCard';
 import { searchMarketData } from '../../services/market-data';
 import Animated, { FadeIn, Layout } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import { safeHapticNotification } from '../../utils/haptics';
 
 type FilterType = 'all' | 'stocks' | 'crypto';
 
@@ -43,15 +43,11 @@ export default function SearchScreen() {
       console.log('Filtered results:', filteredResults);
       setSearchResults(filteredResults);
       setHasSearched(true);
-      Haptics.notificationAsync(
-        filteredResults.length > 0 
-          ? Haptics.NotificationFeedbackType.Success 
-          : Haptics.NotificationFeedbackType.Warning
-      );
+      safeHapticNotification();
     } catch (error) {
       console.error('Search error:', error);
       setError('An error occurred while searching. Please try again.');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      safeHapticNotification();
     } finally {
       setIsSearching(false);
     }

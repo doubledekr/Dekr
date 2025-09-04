@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { useDispatch } from 'react-redux';
 import { setUser, setHasCompletedOnboarding } from '../store/slices/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '../services/firebase-platform';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch();

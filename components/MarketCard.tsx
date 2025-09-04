@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Dimensions, Pressable, ViewStyle, TouchableWith
 import { BlurView } from 'expo-blur';
 import { Icon, useTheme } from 'react-native-paper';
 import { MarketCard as MarketCardType } from '../store/slices/watchlistSlice';
-import * as Haptics from 'expo-haptics';
+import { safeHapticImpact } from '../utils/haptics';
 import Animated, { interpolate, useAnimatedStyle, withTiming, useSharedValue, withSpring } from 'react-native-reanimated';
 import { VectorBadge } from './VectorBadge';
 import { SentimentButton } from './SentimentButton';
@@ -28,6 +28,7 @@ export interface NewsCardData {
   url: string;
   sentiment?: 'positive' | 'negative' | 'neutral';
   tickers?: string[];
+  sentimentScore?: number;
 }
 
 type CardData = MarketCardType | NewsCardData;
@@ -126,7 +127,7 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
       isSentimentPress.current = false;
       return;
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    safeHapticImpact();
     spin.value = withTiming(spin.value ? 0 : 1, { duration: 500 });
     onFlip?.();
 
@@ -145,7 +146,7 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
       setSelectedSentiment(null);
       sentimentExpand.value = withSpring(0);
     } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      safeHapticImpact();
       setSelectedSentiment('bullish');
       sentimentExpand.value = withSpring(1);
 
@@ -167,7 +168,7 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
       setSelectedSentiment(null);
       sentimentExpand.value = withSpring(0);
     } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      safeHapticImpact();
       setSelectedSentiment('bearish');
       sentimentExpand.value = withSpring(1);
 
@@ -183,7 +184,7 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
   };
 
   const formatNumber = (num?: number) => {
-    if (num === undefined) return '-';
+    if (num === undefined || num === null || isNaN(num)) return '-';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -193,8 +194,13 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
   };
 
   const formatPercentage = (num?: number) => {
-    if (num === undefined) return '-';
-    return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+    if (num === undefined || num === null || isNaN(num) || typeof num !== 'number') return '-';
+    try {
+      return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+    } catch (error) {
+      console.error('formatPercentage error:', error, 'value:', num);
+      return '-';
+    }
   };
 
   const formatTimestamp = (timestamp: number) => {
@@ -506,7 +512,12 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
     <Animated.View style={[styles.cardFace, backAnimatedStyle]}>
       {data.type === 'news' ? renderNewsCard(true) : (
         <>
-          <View style={styles.cardContent}>
+          <ScrollView 
+            style={styles.cardContent}
+            showsVerticalScrollIndicator={false}
+            bounces={true}
+            contentContainerStyle={styles.scrollableCardContent}
+          >
             
             <View style={[styles.backHeader, { backgroundColor: 'transparent' }]}>
               <Text style={[styles.backSymbol, { color: colors.text }]}>
@@ -618,7 +629,70 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
                 </View>
               )}
             </View>
-          </View>
+
+            {/* Ticker-specific news section */}
+            {data.tickerNews && data.tickerNews.length > 0 && (
+              <View style={[styles.tickerNewsSection, { backgroundColor: colors.background }]}>
+                <View style={styles.tickerNewsHeader}>
+                  <Text style={[styles.tickerNewsTitle, { color: colors.text }]}>
+                    📰 Related News
+                  </Text>
+                  {data.newsSentimentScore !== undefined && (
+                    <View style={[
+                      styles.newsSentimentBadge,
+                      { backgroundColor: data.newsSentimentScore > 0.1 ? '#10B981' : 
+                                        data.newsSentimentScore < -0.1 ? '#EF4444' : '#6B7280' }
+                    ]}>
+                      <Text style={styles.newsSentimentText}>
+                        {data.newsSentimentScore > 0.1 ? '📈 Positive' : 
+                         data.newsSentimentScore < -0.1 ? '📉 Negative' : '➡️ Neutral'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.newsScrollView}>
+                  {data.tickerNews.slice(0, 3).map((news, index) => (
+                    <TouchableOpacity
+                      key={news.id}
+                      style={[styles.newsItem, { borderBottomColor: colors.text + '20' }]}
+                      onPress={() => {
+                        if (news.url) {
+                          Linking.openURL(news.url);
+                        }
+                      }}
+                    >
+                      <View style={styles.newsItemHeader}>
+                        <Text style={[styles.newsHeadline, { color: colors.text }]} numberOfLines={2}>
+                          {news.headline}
+                        </Text>
+                        <View style={[
+                          styles.newsItemSentiment,
+                          { backgroundColor: news.sentiment === 'positive' ? '#10B981' : 
+                                            news.sentiment === 'negative' ? '#EF4444' : '#6B7280' }
+                        ]}>
+                          <Text style={styles.newsItemSentimentText}>
+                            {news.sentiment === 'positive' ? '📈' : 
+                             news.sentiment === 'negative' ? '📉' : '➡️'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.newsContent, { color: colors.text + 'CC' }]} numberOfLines={2}>
+                        {news.content}
+                      </Text>
+                      <View style={styles.newsItemFooter}>
+                        <Text style={[styles.newsSource, { color: colors.text + '80' }]}>
+                          {news.source}
+                        </Text>
+                        <Text style={[styles.newsTime, { color: colors.text + '80' }]}>
+                          {formatTimestamp(news.timestamp)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </ScrollView>
         </>
       )}
     </Animated.View>
@@ -685,6 +759,10 @@ const styles = StyleSheet.create({
   cardContent: {
     flex: 1,
     position: 'relative',
+  },
+  scrollableCardContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   cornerLabel: {
     position: 'absolute',
@@ -1131,5 +1209,84 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
+  },
+  tickerNewsSection: {
+    marginTop: 15,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    flex: 1,
+  },
+  tickerNewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  tickerNewsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Graphik-Semibold',
+  },
+  newsSentimentBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  newsSentimentText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: 'Graphik-Medium',
+  },
+  newsScrollView: {
+    marginTop: 8,
+  },
+  newsItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  newsItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  newsHeadline: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Graphik-Semibold',
+    flex: 1,
+    marginRight: 8,
+  },
+  newsItemSentiment: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  newsItemSentimentText: {
+    fontSize: 12,
+    color: 'white',
+  },
+  newsContent: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 6,
+    fontFamily: 'Graphik-Regular',
+  },
+  newsItemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  newsSource: {
+    fontSize: 11,
+    fontWeight: '500',
+    fontFamily: 'Graphik-Medium',
+  },
+  newsTime: {
+    fontSize: 11,
+    fontFamily: 'Graphik-Regular',
   },
 }); 

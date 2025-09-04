@@ -1,0 +1,699 @@
+import axios from 'axios';
+import { SearchResult, PriceHistory, NewsArticle } from './market-data';
+import { NewsCardData } from '../components/MarketCard';
+
+const POLYGON_API_KEY = process.env.EXPO_PUBLIC_POLYGON_API_KEY;
+const POLYGON_BASE_URL = 'https://api.polygon.io';
+
+interface PolygonTickerResponse {
+  results: Array<{
+    ticker: string;
+    name: string;
+    market: string;
+    locale: string;
+    primary_exchange: string;
+    type: string;
+    active: boolean;
+    currency_name: string;
+    cik?: string;
+    composite_figi?: string;
+    share_class_figi?: string;
+    last_updated_utc: string;
+  }>;
+  status: string;
+  request_id: string;
+  count: number;
+  next_url?: string;
+}
+
+interface PolygonQuoteResponse {
+  results: {
+    c: number; // Close price
+    h: number; // High price
+    l: number; // Low price
+    o: number; // Open price
+    v: number; // Volume
+    vw: number; // Volume weighted average price
+    t: number; // Timestamp
+  }[];
+  ticker: string;
+  queryCount: number;
+  resultsCount: number;
+  adjusted: boolean;
+  status: string;
+  request_id: string;
+  count: number;
+}
+
+interface PolygonPrevCloseResponse {
+  ticker: string;
+  queryCount: number;
+  resultsCount: number;
+  adjusted: boolean;
+  results: Array<{
+    T: string; // Ticker
+    v: number; // Volume
+    vw: number; // Volume weighted average price
+    o: number; // Open price
+    c: number; // Close price
+    h: number; // High price
+    l: number; // Low price
+    t: number; // Timestamp
+    n: number; // Number of transactions
+  }>;
+  status: string;
+  request_id: string;
+  count: number;
+}
+
+interface PolygonNewsResponse {
+  results: Array<{
+    id: string;
+    publisher: {
+      name: string;
+      homepage_url: string;
+      logo_url: string;
+      favicon_url: string;
+    };
+    title: string;
+    author: string;
+    published_utc: string;
+    article_url: string;
+    tickers: string[];
+    image_url?: string;
+    description?: string;
+    keywords?: string[];
+    insights?: Array<{
+      ticker: string;
+      sentiment: 'positive' | 'negative' | 'neutral';
+      sentiment_reasoning: string;
+    }>;
+  }>;
+  status: string;
+  request_id: string;
+  count: number;
+  next_url?: string;
+}
+
+export async function searchPolygonTickers(query: string, limit: number = 10): Promise<SearchResult[]> {
+  try {
+    if (!POLYGON_API_KEY) {
+      console.warn('Polygon API key not found');
+      return [];
+    }
+
+    // Search for tickers
+    const searchResponse = await axios.get<PolygonTickerResponse>(`${POLYGON_BASE_URL}/v3/reference/tickers`, {
+      params: {
+        search: query,
+        active: true,
+        limit,
+        apikey: POLYGON_API_KEY,
+      },
+    });
+
+    if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
+      return [];
+    }
+
+    // Get current quotes for the found tickers
+    const results = await Promise.all(
+      searchResponse.data.results.slice(0, limit).map(async (ticker) => {
+        try {
+          // Get previous close data
+          const prevCloseResponse = await axios.get<PolygonPrevCloseResponse>(
+            `${POLYGON_BASE_URL}/v2/aggs/ticker/${ticker.ticker}/prev`,
+            {
+              params: {
+                adjusted: true,
+                apikey: POLYGON_API_KEY,
+              },
+            }
+          );
+
+          if (!prevCloseResponse.data.results || prevCloseResponse.data.results.length === 0) {
+            return null;
+          }
+
+          const prevData = prevCloseResponse.data.results[0];
+          const currentPrice = prevData.c;
+          const previousClose = prevData.o;
+          const changePercentage = previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
+
+          // Determine market type
+          const isStock = ticker.market === 'stocks' || ticker.type === 'CS';
+          const isCrypto = ticker.market === 'crypto' || ticker.type === 'CRYPTO';
+
+          // Generate basic sentiment and grade
+          const sentiment = changePercentage > 0 ? 'positive' : changePercentage < 0 ? 'negative' : 'neutral';
+          const volatility = Math.abs(changePercentage) > 5 ? 'High' : Math.abs(changePercentage) > 2 ? 'Medium' : 'Low';
+          const grade = changePercentage > 5 ? 'A' : changePercentage > 2 ? 'B' : changePercentage > -2 ? 'C' : changePercentage > -5 ? 'D' : 'F';
+          const signal = changePercentage > 3 ? 'Buy' : changePercentage < -3 ? 'Sell' : 'Hold';
+
+          const result: SearchResult = {
+            id: `polygon-${ticker.ticker}`,
+            symbol: ticker.ticker,
+            name: ticker.name,
+            exchange: ticker.primary_exchange,
+            price: currentPrice,
+            changePercentage,
+            previousClose,
+            volume: prevData.v,
+            dayRange: `${prevData.l}-${prevData.h}`,
+            type: isCrypto ? 'crypto' : 'stock',
+            timestamp: Date.now(),
+            sentiment,
+            grade: grade as 'A' | 'B' | 'C' | 'D' | 'F',
+            volatility: volatility as 'Low' | 'Medium' | 'High',
+            currentSignal: signal as 'Buy' | 'Sell' | 'Hold',
+          };
+
+          // Add crypto-specific fields
+          if (isCrypto) {
+            result.high24h = prevData.h;
+            result.low24h = prevData.l;
+          }
+
+          return result;
+        } catch (error) {
+          console.error(`Error fetching data for ${ticker.ticker}:`, error);
+          return null;
+        }
+      })
+    );
+
+    return results.filter((result): result is SearchResult => result !== null);
+  } catch (error) {
+    console.error('Error searching Polygon tickers:', error);
+    return [];
+  }
+}
+
+export async function getPolygonPriceHistory(symbol: string, days: number = 30): Promise<PriceHistory> {
+  try {
+    if (!POLYGON_API_KEY) {
+      console.warn('Polygon API key not found');
+      return { prices: [], labels: [] };
+    }
+
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+
+    const response = await axios.get<PolygonQuoteResponse>(
+      `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/range/1/day/${startDate.toISOString().split('T')[0]}/${endDate.toISOString().split('T')[0]}`,
+      {
+        params: {
+          adjusted: true,
+          sort: 'asc',
+          apikey: POLYGON_API_KEY,
+        },
+      }
+    );
+
+    if (!response.data.results || response.data.results.length === 0) {
+      return { prices: [], labels: [] };
+    }
+
+    const prices = response.data.results.map(item => item.c);
+    const labels = response.data.results.map(item => {
+      const date = new Date(item.t);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+
+    return { prices, labels };
+  } catch (error) {
+    console.error(`Error fetching price history for ${symbol}:`, error);
+    return { prices: [], labels: [] };
+  }
+}
+
+export async function getPolygonMarketStatus(): Promise<{ market: string; serverTime: string; exchanges: any }> {
+  try {
+    if (!POLYGON_API_KEY) {
+      throw new Error('Polygon API key not found');
+    }
+
+    const response = await axios.get(`${POLYGON_BASE_URL}/v1/marketstatus/now`, {
+      params: {
+        apikey: POLYGON_API_KEY,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching market status:', error);
+    throw error;
+  }
+}
+
+export async function getPolygonPopularStocks(stockCount: number = 10): Promise<SearchResult[]> {
+  try {
+    if (!POLYGON_API_KEY) {
+      console.warn('Polygon API key not found');
+      return [];
+    }
+
+    // Popular stock symbols to fetch
+    const popularSymbols = [
+      'AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX', 
+      'AMD', 'BABA', 'UBER', 'COIN', 'PLTR', 'PYPL', 'SHOP', 'SQ',
+      'ROKU', 'ZOOM', 'DOCU', 'CRM'
+    ];
+
+    // Shuffle and take requested count
+    const shuffled = [...popularSymbols].sort(() => 0.5 - Math.random());
+    const selectedSymbols = shuffled.slice(0, stockCount);
+
+    console.log('Fetching popular stocks from Polygon:', selectedSymbols);
+
+    const results = await Promise.all(
+      selectedSymbols.map(async (symbol) => {
+        try {
+          // Get previous close data for each symbol
+          const prevCloseResponse = await axios.get<PolygonPrevCloseResponse>(
+            `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/prev`,
+            {
+              params: {
+                adjusted: true,
+                apikey: POLYGON_API_KEY,
+              },
+            }
+          );
+
+          if (!prevCloseResponse.data.results || prevCloseResponse.data.results.length === 0) {
+            console.warn(`No data for ${symbol}`);
+            return null;
+          }
+
+          const prevData = prevCloseResponse.data.results[0];
+          const currentPrice = prevData.c;
+          const previousClose = prevData.o;
+          const changePercentage = previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
+
+          // Generate basic analysis
+          const sentiment = changePercentage > 0 ? 'positive' : changePercentage < 0 ? 'negative' : 'neutral';
+          const volatility = Math.abs(changePercentage) > 5 ? 'High' : Math.abs(changePercentage) > 2 ? 'Medium' : 'Low';
+          const grade = changePercentage > 5 ? 'A' : changePercentage > 2 ? 'B' : changePercentage > -2 ? 'C' : changePercentage > -5 ? 'D' : 'F';
+          const signal = changePercentage > 3 ? 'Buy' : changePercentage < -3 ? 'Sell' : 'Hold';
+
+          // Get company name (simplified mapping)
+          const companyNames: { [key: string]: string } = {
+            'AAPL': 'Apple Inc.',
+            'GOOGL': 'Alphabet Inc.',
+            'MSFT': 'Microsoft Corporation',
+            'TSLA': 'Tesla, Inc.',
+            'AMZN': 'Amazon.com, Inc.',
+            'META': 'Meta Platforms, Inc.',
+            'NVDA': 'NVIDIA Corporation',
+            'NFLX': 'Netflix, Inc.',
+            'AMD': 'Advanced Micro Devices, Inc.',
+            'BABA': 'Alibaba Group Holding Limited',
+            'UBER': 'Uber Technologies, Inc.',
+            'COIN': 'Coinbase Global, Inc.',
+            'PLTR': 'Palantir Technologies Inc.',
+            'PYPL': 'PayPal Holdings, Inc.',
+            'SHOP': 'Shopify Inc.',
+            'SQ': 'Block, Inc.',
+            'ROKU': 'Roku, Inc.',
+            'ZOOM': 'Zoom Video Communications, Inc.',
+            'DOCU': 'DocuSign, Inc.',
+            'CRM': 'Salesforce, Inc.'
+          };
+
+          // Fetch ticker-specific news from Polygon
+          let tickerNews: NewsArticle[] = [];
+          let newsSentimentScore = 0;
+          let finalSentiment = sentiment;
+
+          try {
+            tickerNews = await fetchPolygonTickerNews(symbol, 3);
+            if (tickerNews.length > 0) {
+              // Calculate average sentiment from news
+              const sentimentScores = tickerNews
+                .map(news => {
+                  if (news.sentiment === 'positive') return 0.5;
+                  if (news.sentiment === 'negative') return -0.5;
+                  return 0;
+                })
+                .filter(score => score !== 0);
+              
+              if (sentimentScores.length > 0) {
+                newsSentimentScore = sentimentScores.reduce((sum, score) => sum + score, 0) / sentimentScores.length;
+                
+                // Combine price sentiment with news sentiment (60% price, 40% news)
+                const priceSentimentScore = changePercentage / 10; // Normalize to -1 to 1 range
+                const combinedScore = (priceSentimentScore * 0.6) + (newsSentimentScore * 0.4);
+                
+                if (combinedScore > 0.1) finalSentiment = 'positive';
+                else if (combinedScore < -0.1) finalSentiment = 'negative';
+                else finalSentiment = 'neutral';
+              }
+            }
+          } catch (error) {
+            console.warn(`Could not fetch news for ${symbol}:`, error);
+          }
+
+          const result: SearchResult = {
+            id: `polygon-stock-${symbol}`,
+            symbol: symbol,
+            name: companyNames[symbol] || `${symbol} Corporation`,
+            exchange: 'NASDAQ',
+            price: currentPrice,
+            changePercentage,
+            previousClose,
+            volume: prevData.v,
+            dayRange: `${prevData.l}-${prevData.h}`,
+            type: 'stock',
+            timestamp: Date.now(),
+            sentiment: finalSentiment,
+            grade: grade as 'A' | 'B' | 'C' | 'D' | 'F',
+            volatility: volatility as 'Low' | 'Medium' | 'High',
+            currentSignal: signal as 'Buy' | 'Sell' | 'Hold',
+            marketCap: Math.floor(Math.random() * 1000000000000), // Placeholder
+            tickerNews: tickerNews,
+            newsSentimentScore,
+          };
+
+          return result;
+        } catch (error) {
+          console.error(`Error fetching data for ${symbol}:`, error);
+          return null;
+        }
+      })
+    );
+
+    const validResults = results.filter((result): result is SearchResult => result !== null);
+    console.log('Successfully fetched', validResults.length, 'popular stocks from Polygon');
+    return validResults;
+  } catch (error) {
+    console.error('Error fetching popular stocks from Polygon:', error);
+    return [];
+  }
+}
+
+export async function getPolygonPopularCrypto(cryptoCount: number = 5): Promise<SearchResult[]> {
+  try {
+    if (!POLYGON_API_KEY) {
+      console.warn('Polygon API key not found');
+      return [];
+    }
+
+    // Popular crypto symbols to fetch (in USD pairs)
+    const popularCryptoSymbols = [
+      'X:BTCUSD', 'X:ETHUSD', 'X:ADAUSD', 'X:SOLUSD', 'X:MATICUSD',
+      'X:DOGEUSD', 'X:SHIBUSD', 'X:AVAXUSD', 'X:LINKUSD', 'X:DOTUSD'
+    ];
+
+    // Shuffle and take requested count
+    const shuffled = [...popularCryptoSymbols].sort(() => 0.5 - Math.random());
+    const selectedSymbols = shuffled.slice(0, cryptoCount);
+
+    console.log('Fetching popular crypto from Polygon:', selectedSymbols);
+
+    const results = await Promise.all(
+      selectedSymbols.map(async (symbol) => {
+        try {
+          // Get previous close data for each crypto symbol
+          const prevCloseResponse = await axios.get<PolygonPrevCloseResponse>(
+            `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/prev`,
+            {
+              params: {
+                adjusted: true,
+                apikey: POLYGON_API_KEY,
+              },
+            }
+          );
+
+          if (!prevCloseResponse.data.results || prevCloseResponse.data.results.length === 0) {
+            console.warn(`No data for ${symbol}`);
+            return null;
+          }
+
+          const prevData = prevCloseResponse.data.results[0];
+          const currentPrice = prevData.c;
+          const previousClose = prevData.o;
+          const changePercentage = previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
+
+          // Generate basic analysis (crypto is more volatile)
+          const sentiment = changePercentage > 0 ? 'positive' : changePercentage < 0 ? 'negative' : 'neutral';
+          const volatility = Math.abs(changePercentage) > 10 ? 'High' : Math.abs(changePercentage) > 5 ? 'Medium' : 'Low';
+          const grade = changePercentage > 10 ? 'A' : changePercentage > 5 ? 'B' : changePercentage > -5 ? 'C' : changePercentage > -10 ? 'D' : 'F';
+          const signal = changePercentage > 5 ? 'Buy' : changePercentage < -5 ? 'Sell' : 'Hold';
+
+          // Get crypto name (simplified mapping)
+          const cryptoNames: { [key: string]: string } = {
+            'X:BTCUSD': 'Bitcoin',
+            'X:ETHUSD': 'Ethereum',
+            'X:ADAUSD': 'Cardano',
+            'X:SOLUSD': 'Solana',
+            'X:MATICUSD': 'Polygon',
+            'X:DOGEUSD': 'Dogecoin',
+            'X:SHIBUSD': 'Shiba Inu',
+            'X:AVAXUSD': 'Avalanche',
+            'X:LINKUSD': 'Chainlink',
+            'X:DOTUSD': 'Polkadot'
+          };
+
+          const displaySymbol = symbol.replace('X:', '').replace('USD', '');
+
+          const result: SearchResult = {
+            id: `polygon-crypto-${displaySymbol}`,
+            symbol: displaySymbol,
+            name: cryptoNames[symbol] || displaySymbol,
+            exchange: 'Polygon',
+            price: currentPrice,
+            changePercentage,
+            previousClose,
+            volume: prevData.v,
+            dayRange: `${prevData.l}-${prevData.h}`,
+            type: 'crypto',
+            timestamp: Date.now(),
+            sentiment,
+            grade: grade as 'A' | 'B' | 'C' | 'D' | 'F',
+            volatility: volatility as 'Low' | 'Medium' | 'High',
+            currentSignal: signal as 'Buy' | 'Sell' | 'Hold',
+            high24h: prevData.h,
+            low24h: prevData.l,
+            marketCap: Math.floor(Math.random() * 100000000000), // Placeholder
+          };
+
+          return result;
+        } catch (error) {
+          console.error(`Error fetching data for ${symbol}:`, error);
+          return null;
+        }
+      })
+    );
+
+    const validResults = results.filter((result): result is SearchResult => result !== null);
+    console.log('Successfully fetched', validResults.length, 'popular crypto from Polygon');
+    return validResults;
+  } catch (error) {
+    console.error('Error fetching popular crypto from Polygon:', error);
+    return [];
+  }
+}
+
+export async function fetchPolygonFinancialNews(limit: number = 10): Promise<NewsArticle[]> {
+  try {
+    if (!POLYGON_API_KEY) {
+      console.warn('Polygon API key not found');
+      return [];
+    }
+
+    console.log('📰 Fetching financial news from Polygon API...');
+
+    const response = await axios.get<PolygonNewsResponse>(`${POLYGON_BASE_URL}/v2/reference/news`, {
+      params: {
+        limit,
+        'ticker.gte': '', // Get news for all tickers
+        order: 'desc',
+        sort: 'published_utc',
+        apikey: POLYGON_API_KEY,
+      },
+    });
+
+    if (!response.data.results || response.data.results.length === 0) {
+      console.log('No financial news found');
+      return [];
+    }
+
+    const newsArticles = response.data.results.map((item): NewsArticle => {
+      // Determine sentiment from insights if available
+      let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
+      if (item.insights && item.insights.length > 0) {
+        const sentiments = item.insights.map(insight => insight.sentiment);
+        const positiveCount = sentiments.filter(s => s === 'positive').length;
+        const negativeCount = sentiments.filter(s => s === 'negative').length;
+        
+        if (positiveCount > negativeCount) sentiment = 'positive';
+        else if (negativeCount > positiveCount) sentiment = 'negative';
+      }
+
+      return {
+        id: `polygon-news-${item.id}`,
+        type: 'news',
+        headline: item.title,
+        content: item.description || item.title,
+        source: item.publisher.name,
+        timestamp: new Date(item.published_utc).getTime(),
+        imageUrl: item.image_url,
+        url: item.article_url,
+        sentiment,
+        tickers: item.tickers,
+      };
+    });
+
+    console.log(`✅ Found ${newsArticles.length} news articles from Polygon`);
+    return newsArticles;
+  } catch (error) {
+    console.error('Error fetching news from Polygon:', error);
+    return [];
+  }
+}
+
+export async function searchPolygonNews(query: string, limit: number = 10): Promise<NewsArticle[]> {
+  try {
+    if (!POLYGON_API_KEY) {
+      console.warn('Polygon API key not found');
+      return [];
+    }
+
+    console.log(`📰 Searching Polygon news for: ${query}`);
+
+    // First try searching by ticker
+    let response = await axios.get<PolygonNewsResponse>(`${POLYGON_BASE_URL}/v2/reference/news`, {
+      params: {
+        'ticker': query.toUpperCase(),
+        limit,
+        order: 'desc',
+        sort: 'published_utc',
+        apikey: POLYGON_API_KEY,
+      },
+    });
+
+    // If no results, try a broader search
+    if (!response.data.results || response.data.results.length === 0) {
+      response = await axios.get<PolygonNewsResponse>(`${POLYGON_BASE_URL}/v2/reference/news`, {
+        params: {
+          limit,
+          order: 'desc',
+          sort: 'published_utc',
+          apikey: POLYGON_API_KEY,
+        },
+      });
+      
+      // Filter results locally by query
+      if (response.data.results) {
+        response.data.results = response.data.results.filter(article => 
+          article.title.toLowerCase().includes(query.toLowerCase()) ||
+          article.description?.toLowerCase().includes(query.toLowerCase()) ||
+          article.tickers.some(ticker => ticker.toLowerCase().includes(query.toLowerCase()))
+        );
+      }
+    }
+
+    if (!response.data.results || response.data.results.length === 0) {
+      return [];
+    }
+
+    const newsArticles = response.data.results.map((item): NewsArticle => {
+      let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
+      if (item.insights && item.insights.length > 0) {
+        const sentiments = item.insights.map(insight => insight.sentiment);
+        const positiveCount = sentiments.filter(s => s === 'positive').length;
+        const negativeCount = sentiments.filter(s => s === 'negative').length;
+        
+        if (positiveCount > negativeCount) sentiment = 'positive';
+        else if (negativeCount > positiveCount) sentiment = 'negative';
+      }
+
+      return {
+        id: `polygon-news-search-${item.id}`,
+        type: 'news',
+        headline: item.title,
+        content: item.description || item.title,
+        source: item.publisher.name,
+        timestamp: new Date(item.published_utc).getTime(),
+        imageUrl: item.image_url,
+        url: item.article_url,
+        sentiment,
+        tickers: item.tickers,
+      };
+    });
+
+    console.log(`✅ Found ${newsArticles.length} news articles for query: ${query}`);
+    return newsArticles;
+  } catch (error) {
+    console.error(`Error searching Polygon news for ${query}:`, error);
+    return [];
+  }
+}
+
+export async function fetchPolygonTickerNews(ticker: string, limit: number = 5): Promise<NewsArticle[]> {
+  try {
+    if (!POLYGON_API_KEY) {
+      console.warn('Polygon API key not found');
+      return [];
+    }
+
+    console.log(`📰 Fetching ticker-specific news for ${ticker} from Polygon...`);
+
+    const response = await axios.get<PolygonNewsResponse>(`${POLYGON_BASE_URL}/v2/reference/news`, {
+      params: {
+        'ticker': ticker.toUpperCase(),
+        limit,
+        order: 'desc',
+        sort: 'published_utc',
+        apikey: POLYGON_API_KEY,
+      },
+    });
+
+    if (!response.data.results || response.data.results.length === 0) {
+      console.log(`No ticker-specific news found for ${ticker}`);
+      return [];
+    }
+
+    const tickerNews = response.data.results.map((item): NewsArticle => {
+      let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
+      
+      // Use insights for the specific ticker if available
+      if (item.insights && item.insights.length > 0) {
+        const tickerInsight = item.insights.find(insight => 
+          insight.ticker.toUpperCase() === ticker.toUpperCase()
+        );
+        if (tickerInsight) {
+          sentiment = tickerInsight.sentiment;
+        } else {
+          // Fallback to general sentiment analysis
+          const sentiments = item.insights.map(insight => insight.sentiment);
+          const positiveCount = sentiments.filter(s => s === 'positive').length;
+          const negativeCount = sentiments.filter(s => s === 'negative').length;
+          
+          if (positiveCount > negativeCount) sentiment = 'positive';
+          else if (negativeCount > positiveCount) sentiment = 'negative';
+        }
+      }
+
+      return {
+        id: `polygon-ticker-news-${ticker}-${item.id}`,
+        type: 'news',
+        headline: item.title,
+        content: item.description || item.title,
+        source: item.publisher.name,
+        timestamp: new Date(item.published_utc).getTime(),
+        imageUrl: item.image_url,
+        url: item.article_url,
+        sentiment,
+        tickers: item.tickers.length > 0 ? item.tickers : [ticker],
+      };
+    });
+    
+    console.log(`✅ Found ${tickerNews.length} news articles for ${ticker}`);
+    return tickerNews;
+  } catch (error) {
+    console.error(`Error fetching ticker news for ${ticker}:`, error);
+    return [];
+  }
+}

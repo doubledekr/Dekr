@@ -1,246 +1,242 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
-  KeyboardAvoidingView,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
-import { Text, Searchbar, useTheme, Chip, Card, ProgressBar } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEducation } from '../../contexts/EducationContext';
 
-interface SuggestedTopic {
-  id: string;
-  title: string;
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  description: string;
-}
-
-const suggestedTopics: SuggestedTopic[] = [
-  {
-    id: '1',
-    title: 'Trading Strategies',
-    icon: 'chart-line',
-    description: 'Learn different trading strategies and find what works for you',
-  },
-  {
-    id: '2',
-    title: 'Trader Type Quiz',
-    icon: 'help-circle',
-    description: 'Discover your trading personality and optimal strategies',
-  },
-  {
-    id: '3',
-    title: 'Market Basics',
-    icon: 'book-open-variant',
-    description: 'Understanding market fundamentals and key concepts',
-  },
-  {
-    id: '4',
-    title: 'Risk Management',
-    icon: 'shield-check',
-    description: 'Learn how to protect your investments and manage risk',
-  },
-];
-
-const popularSearches = [
-  'How to start investing',
-  'Best trading strategies',
-  'Crypto basics',
-  'Stock analysis',
-  'Technical indicators',
-  'Risk management',
-];
-
-interface RecentCourse {
-  id: string;
-  title: string;
-  progress: number;
-  query: string;
-  lastAccessed: number;
-}
+const { width } = Dimensions.get('window');
 
 export default function EducationScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [recentCourses, setRecentCourses] = useState<RecentCourse[]>([]);
-  const [completedCourses, setCompletedCourses] = useState<RecentCourse[]>([]);
+  const { user, stages, loading } = useEducation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    async function loadRecentCourses() {
-      try {
-        const recent = await AsyncStorage.getItem('recent_courses');
-        if (recent) {
-          const courses = JSON.parse(recent) as RecentCourse[];
-          // Sort by last accessed, most recent first
-          courses.sort((a, b) => b.lastAccessed - a.lastAccessed);
-          
-          // Split courses into in-progress and completed
-          const inProgress = courses.filter(course => course.progress < 1);
-          const completed = courses.filter(course => course.progress >= 1);
-          
-          setRecentCourses(inProgress.slice(0, 3)); // Show only last 3 in-progress courses
-          setCompletedCourses(completed.slice(0, 3)); // Show only last 3 completed courses
-        }
-      } catch (error) {
-        console.error('Error loading recent courses:', error);
-      }
-    }
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading lessons...</Text>
+        </View>
+      </View>
+    );
+  }
 
-    loadRecentCourses();
-  }, []);
+  const currentStage = stages.find(stage => stage.id === user.currentStage);
+  const completedLessonsCount = user.completedLessons.length;
+  const totalLessons = stages.reduce((total, stage) => total + stage.lessons.length, 0);
+  const progressPercentage = (completedLessonsCount / totalLessons) * 100;
 
-  const handleSearch = useCallback(() => {
-    if (searchQuery.trim()) {
+  const isLessonCompleted = (stageId: number, lessonId: number) => {
+    return user.completedLessons.some(
+      completed => completed.stageId === stageId && completed.lessonId === lessonId
+    );
+  };
+
+  const isLessonLocked = (stageId: number, lessonId: number) => {
+    const stage = stages.find(s => s.id === stageId);
+    if (!stage) return true;
+    
+    // First lesson is always unlocked
+    if (lessonId === 1) return false;
+    
+    // Check if previous lesson is completed
+    const previousLessonCompleted = isLessonCompleted(stageId, lessonId - 1);
+    return !previousLessonCompleted;
+  };
+
+  const getStageProgress = (stageId: number) => {
+    const stage = stages.find(s => s.id === stageId);
+    if (!stage) return 0;
+    
+    const completedCount = stage.lessons.filter(lesson => 
+      isLessonCompleted(stageId, lesson.id)
+    ).length;
+    
+    return (completedCount / stage.lessons.length) * 100;
+  };
+
+  const handleLessonPress = (stageId: number, lessonId: number) => {
+    if (!isLessonLocked(stageId, lessonId)) {
       router.push({
-        pathname: '/(tabs)/course-generator',
-        params: { query: searchQuery },
+        pathname: '/lesson-detail',
+        params: { stageId: stageId.toString(), lessonId: lessonId.toString() }
       });
     }
-  }, [searchQuery]);
-
-  const handleTopicPress = (topic: SuggestedTopic) => {
-    router.push({
-      pathname: '/(tabs)/course-generator',
-      params: { query: topic.title },
-    });
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.searchContainer}>
-        <Searchbar
-          placeholder="What would you like to learn?"
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          onSubmitEditing={handleSearch}
-          style={styles.searchBar}
-        />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>Hello, {user.firstName}!</Text>
+          <Text style={styles.subtitle}>Ready to learn today?</Text>
+        </View>
+        <View style={styles.xpContainer}>
+          <MaterialCommunityIcons name="star" size={24} color="#fbbf24" />
+          <Text style={styles.xpText}>{user.xp} XP</Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {recentCourses.length > 0 && (
-          <View style={styles.recentCourses}>
-            <Text style={styles.sectionTitle}>Continue Learning</Text>
-            {recentCourses.map((course) => (
-              <TouchableOpacity
-                key={course.id}
-                onPress={() => router.push({
-                  pathname: '/(tabs)/course-generator',
-                  params: { query: course.query },
-                })}
-              >
-                <Card style={styles.courseCard}>
-                  <Card.Content>
-                    <Text style={styles.courseTitle}>{course.title}</Text>
-                    <View style={styles.progressContainer}>
-                      <ProgressBar
-                        progress={course.progress}
-                        color={theme.colors.primary}
-                        style={styles.progressBar}
-                      />
-                      <Text style={styles.progressText}>
-                        {Math.round(course.progress * 100)}% Complete
-                      </Text>
-                    </View>
-                  </Card.Content>
-                </Card>
-              </TouchableOpacity>
-            ))}
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
+        {/* Progress Card */}
+        <View style={styles.progressCard}>
+          <Text style={styles.progressTitle}>Your Progress</Text>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
+          </View>
+          <Text style={styles.progressText}>
+            {completedLessonsCount} of {totalLessons} lessons completed
+          </Text>
+        </View>
+
+        {/* Current Stage */}
+        {currentStage && (
+          <View style={styles.currentStageCard}>
+            <Text style={styles.cardTitle}>Current Stage</Text>
+            <Text style={styles.stageTitle}>{currentStage.title}</Text>
+            <Text style={styles.stageDescription}>{currentStage.description}</Text>
+            <TouchableOpacity 
+              style={styles.continueButton}
+              onPress={() => {
+                // Scroll to current stage lessons
+                const nextLesson = currentStage.lessons.find(lesson => 
+                  !isLessonCompleted(currentStage.id, lesson.id)
+                );
+                if (nextLesson) {
+                  handleLessonPress(currentStage.id, nextLesson.id);
+                }
+              }}
+            >
+              <Text style={styles.continueButtonText}>Continue Learning</Text>
+              <MaterialCommunityIcons name="arrow-right" size={20} color="#ffffff" />
+            </TouchableOpacity>
           </View>
         )}
 
-        <View style={styles.popularSearches}>
-          <Text style={styles.sectionTitle}>Popular Topics</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.chipsContainer}
-          >
-            {popularSearches.map((search, index) => (
-              <Chip
-                key={index}
-                style={styles.chip}
-                onPress={() => setSearchQuery(search)}
-                mode="outlined"
-              >
-                {search}
-              </Chip>
-            ))}
-          </ScrollView>
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="fire" size={32} color="#f59e0b" />
+            <Text style={styles.statNumber}>{user.streakDays}</Text>
+            <Text style={styles.statLabel}>Day Streak</Text>
+          </View>
+          
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="trophy" size={32} color="#8b5cf6" />
+            <Text style={styles.statNumber}>{user.earnedBadges.length}</Text>
+            <Text style={styles.statLabel}>Badges</Text>
+          </View>
+          
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="school" size={32} color="#10b981" />
+            <Text style={styles.statNumber}>{completedLessonsCount}</Text>
+            <Text style={styles.statLabel}>Lessons</Text>
+          </View>
         </View>
 
-        <View style={styles.suggestedTopics}>
-          <Text style={styles.sectionTitle}>Featured Courses</Text>
-          {suggestedTopics.map((topic) => (
-            <TouchableOpacity
-              key={topic.id}
-              onPress={() => handleTopicPress(topic)}
-            >
-              <Card style={styles.topicCard}>
-                <Card.Content style={styles.topicCardContent}>
-                  <MaterialCommunityIcons
-                    name={topic.icon}
-                    size={24}
-                    color={theme.colors.primary}
-                  />
-                  <View style={styles.topicTextContainer}>
-                    <Text style={styles.topicTitle}>{topic.title}</Text>
-                    <Text style={styles.topicDescription}>
-                      {topic.description}
-                    </Text>
+        {/* Stages and Lessons */}
+        <View style={styles.stagesContainer}>
+          <Text style={styles.sectionTitle}>Learning Stages</Text>
+          
+          {stages.map((stage) => (
+            <View key={stage.id} style={styles.stageContainer}>
+              <View style={styles.stageHeader}>
+                <View style={styles.stageInfo}>
+                  <Text style={styles.stageCardTitle}>{stage.title}</Text>
+                  <Text style={styles.stageCardDescription}>{stage.description}</Text>
+                </View>
+                <View style={styles.progressContainer}>
+                  <Text style={styles.progressText}>
+                    {Math.round(getStageProgress(stage.id))}%
+                  </Text>
+                  <View style={styles.stageProgressBar}>
+                    <View 
+                      style={[
+                        styles.stageProgressFill, 
+                        { width: `${getStageProgress(stage.id)}%` }
+                      ]} 
+                    />
                   </View>
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={24}
-                    color={theme.colors.primary}
-                  />
-                </Card.Content>
-              </Card>
-            </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.lessonsContainer}>
+                {stage.lessons.map((lesson) => {
+                  const completed = isLessonCompleted(stage.id, lesson.id);
+                  const locked = isLessonLocked(stage.id, lesson.id);
+
+                  return (
+                    <TouchableOpacity
+                      key={lesson.id}
+                      style={[
+                        styles.lessonCard,
+                        locked && styles.lessonCardLocked,
+                        completed && styles.lessonCardCompleted,
+                      ]}
+                      onPress={() => handleLessonPress(stage.id, lesson.id)}
+                      disabled={locked}
+                    >
+                      <View style={styles.lessonIcon}>
+                        {completed ? (
+                          <MaterialCommunityIcons name="check-circle" size={32} color="#10b981" />
+                        ) : locked ? (
+                          <MaterialCommunityIcons name="lock" size={32} color="#9ca3af" />
+                        ) : (
+                          <MaterialCommunityIcons name="play-circle" size={32} color="#2563eb" />
+                        )}
+                      </View>
+
+                      <View style={styles.lessonContent}>
+                        <Text style={[
+                          styles.lessonTitle,
+                          locked && styles.lessonTitleLocked
+                        ]}>
+                          {lesson.title}
+                        </Text>
+                        <Text style={[
+                          styles.lessonDescription,
+                          locked && styles.lessonDescriptionLocked
+                        ]}>
+                          {lesson.description}
+                        </Text>
+                        
+                        <View style={styles.lessonMeta}>
+                          <View style={styles.metaItem}>
+                            <MaterialCommunityIcons name="clock-outline" size={16} color="#6b7280" />
+                            <Text style={styles.metaText}>{lesson.duration} min</Text>
+                          </View>
+                          <View style={styles.metaItem}>
+                            <MaterialCommunityIcons name="star" size={16} color="#fbbf24" />
+                            <Text style={styles.metaText}>{lesson.xpReward} XP</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <MaterialCommunityIcons 
+                        name="chevron-right" 
+                        size={24} 
+                        color={locked ? "#d1d5db" : "#6b7280"} 
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
           ))}
         </View>
-
-        {completedCourses.length > 0 && (
-          <View style={styles.completedCourses}>
-            <Text style={styles.sectionTitle}>Completed Courses</Text>
-            {completedCourses.map((course) => (
-              <TouchableOpacity
-                key={course.id}
-                onPress={() => router.push({
-                  pathname: '/(tabs)/course-generator',
-                  params: { query: course.query },
-                })}
-              >
-                <Card style={[styles.courseCard, styles.completedCourseCard]}>
-                  <Card.Content>
-                    <View style={styles.completedCourseHeader}>
-                      <Text style={styles.courseTitle}>{course.title}</Text>
-                      <MaterialCommunityIcons
-                        name="check-circle"
-                        size={24}
-                        color={theme.colors.primary}
-                      />
-                    </View>
-                    <Text style={styles.completedText}>
-                      Completed on {new Date(course.lastAccessed).toLocaleDateString()}
-                    </Text>
-                  </Card.Content>
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -249,103 +245,288 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0E7CB',
   },
-  searchContainer: {
-    padding: 16,
-    backgroundColor: '#F0E7CB',
-  },
-  searchBar: {
-    borderRadius: 12,
-    elevation: 2,
-  },
-  content: {
+  loadingContainer: {
     flex: 1,
-    padding: 16,
-  },
-  recentCourses: {
-    marginBottom: 24,
-  },
-  courseCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  courseTitle: {
-    fontSize: 16,
-    fontFamily: 'Graphik-Medium',
-    marginBottom: 8,
-    color: '#536B31',
-  },
-  progressContainer: {
-    gap: 4,
-  },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    fontFamily: 'Graphik-Regular',
-    color: '#536B31',
-  },
-  popularSearches: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontFamily: 'AustinNewsDeck-Bold',
-    marginBottom: 12,
-    color: '#536B31',
-  },
-  chipsContainer: {
-    flexDirection: 'row',
-    paddingBottom: 8,
-  },
-  chip: {
-    marginRight: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  suggestedTopics: {
-    gap: 12,
-  },
-  topicCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  topicCardContent: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
   },
-  topicTextContainer: {
-    flex: 1,
-  },
-  topicTitle: {
+  loadingText: {
     fontSize: 16,
-    fontFamily: 'Graphik-Medium',
-    marginBottom: 4,
-  },
-  topicDescription: {
-    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 12,
     fontFamily: 'Graphik-Regular',
-    color: '#666666',
   },
-  completedCourses: {
-    marginTop: 24,
-    marginBottom: 24,
-  },
-  completedCourseCard: {
-    opacity: 0.9,
-  },
-  completedCourseHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 20,
+    paddingTop: 10,
+  },
+  greeting: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#536B31',
+    fontFamily: 'AustinNewsDeck-Bold',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 4,
+    fontFamily: 'Graphik-Regular',
+  },
+  xpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  xpText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#536B31',
+    marginLeft: 6,
+    fontFamily: 'Graphik-Semibold',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  progressCard: {
+    backgroundColor: '#ffffff',
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  progressTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#536B31',
+    marginBottom: 12,
+    fontFamily: 'Graphik-Semibold',
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
     marginBottom: 8,
   },
-  completedText: {
-    fontSize: 12,
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#2563eb',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#6b7280',
     fontFamily: 'Graphik-Regular',
-    color: '#666666',
+  },
+  currentStageCard: {
+    backgroundColor: '#ffffff',
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 8,
+    fontFamily: 'Graphik-Semibold',
+  },
+  stageTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#536B31',
+    marginBottom: 8,
+    fontFamily: 'AustinNewsDeck-Bold',
+  },
+  stageDescription: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginBottom: 16,
+    lineHeight: 24,
+    fontFamily: 'Graphik-Regular',
+  },
+  continueButton: {
+    backgroundColor: '#2563eb',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  continueButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+    fontFamily: 'Graphik-Semibold',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#536B31',
+    marginTop: 8,
+    fontFamily: 'AustinNewsDeck-Bold',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+    textAlign: 'center',
+    fontFamily: 'Graphik-Regular',
+  },
+  stagesContainer: {
+    paddingBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#536B31',
+    marginBottom: 16,
+    fontFamily: 'AustinNewsDeck-Bold',
+  },
+  stageContainer: {
+    backgroundColor: '#ffffff',
+    marginBottom: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  stageHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  stageInfo: {
+    marginBottom: 12,
+  },
+  stageCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#536B31',
+    marginBottom: 4,
+    fontFamily: 'AustinNewsDeck-Bold',
+  },
+  stageCardDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+    fontFamily: 'Graphik-Regular',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stageProgressBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 3,
+    marginLeft: 8,
+  },
+  stageProgressFill: {
+    height: '100%',
+    backgroundColor: '#2563eb',
+    borderRadius: 3,
+  },
+  lessonsContainer: {
+    padding: 16,
+  },
+  lessonCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  lessonCardLocked: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+  },
+  lessonCardCompleted: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
+  },
+  lessonIcon: {
+    marginRight: 16,
+  },
+  lessonContent: {
+    flex: 1,
+  },
+  lessonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#536B31',
+    marginBottom: 4,
+    fontFamily: 'Graphik-Semibold',
+  },
+  lessonTitleLocked: {
+    color: '#9ca3af',
+  },
+  lessonDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 8,
+    lineHeight: 20,
+    fontFamily: 'Graphik-Regular',
+  },
+  lessonDescriptionLocked: {
+    color: '#d1d5db',
+  },
+  lessonMeta: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 4,
+    fontFamily: 'Graphik-Regular',
   },
 });
