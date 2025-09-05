@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Share, Platform } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Share, Platform, Text, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Swiper from 'react-native-deck-swiper';
 import { useTheme, FAB } from 'react-native-paper';
@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import axios from 'axios';
 import { logEvent, AnalyticsEvents } from '../../services/analytics';
 import { getRandomMarketData, SearchResult } from '../../services/market-data';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 interface PriceHistory {
   prices: number[];
@@ -495,6 +496,12 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Navigation Indicator */}
+      <View style={styles.navigationIndicator}>
+        <Text style={styles.navigationText}>Swipe down from any tab to return here</Text>
+        <MaterialCommunityIcons name="chevron-down" size={20} color="#6b7280" />
+      </View>
+      
       <View style={styles.swiperContainer}>
         <Swiper
           ref={swiperRef}
@@ -611,6 +618,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0E7CB',
     paddingTop: 60,
+  },
+  navigationIndicator: {
+    position: 'absolute',
+    top: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  navigationText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
   },
   swiperContainer: {
     flex: 0.8,

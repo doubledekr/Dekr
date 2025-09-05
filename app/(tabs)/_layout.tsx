@@ -20,80 +20,92 @@ export default function TabLayout() {
         headerTintColor: theme.colors.onSurface,
       }}>
       <Tabs.Screen
-        name="index"
+        name="learn"
         options={{
-          title: 'Home',
-          headerShown: false,
+          title: 'Learn',
           tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? "cards" : "cards-outline"} size={size} color={color} />
+            <MaterialCommunityIcons name={focused ? "school" : "school-outline"} size={size} color={color} />
           ),
         }}
       />
       
       <Tabs.Screen
+        name="play"
+        options={{
+          title: 'Play',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? "gamepad-variant" : "gamepad-variant-outline"} size={size} color={color} />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
+        name="build"
+        options={{
+          title: 'Build',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? "hammer-wrench" : "hammer-wrench-outline"} size={size} color={color} />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
+        name="newsletter"
+        options={{
+          title: 'Newsletter',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? "newspaper" : "newspaper-variant-outline"} size={size} color={color} />
+          ),
+        }}
+      />
+      
+      {/* Hidden screens - accessible via navigation but not in tab bar */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
         name="decks"
         options={{
-          title: 'Decks',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'folder' : 'folder-outline'} size={size} color={color} />
-          ),
-          tabBarBadge: undefined, // TODO: Add collaboration invites count
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
         name="strategies"
         options={{
-          title: 'Strategies',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'strategy' : 'strategy'} size={size} color={color} />
-          ),
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
         name="alerts"
         options={{
-          title: 'Alerts',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'bell' : 'bell-outline'} size={size} color={color} />
-          ),
-          tabBarBadge: undefined, // TODO: Add unread alerts count
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
         name="challenges"
         options={{
-          title: 'Challenges',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'trophy' : 'trophy-outline'} size={size} color={color} />
-          ),
-          tabBarBadge: undefined, // TODO: Add active challenges count
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'magnify' : "magnify"} size={size} color={color} />
-          ),
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
         name="social"
         options={{
-          title: 'Social',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? "account-group" : 'account-group-outline'} size={size} color={color} />
-          ),
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
         name="education"
         options={{
-          title: 'Learn',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? "school" : 'school-outline'} size={size} color={color} />
-          ),
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
@@ -105,10 +117,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'account-circle' : 'account-circle-outline'} size={size} color={color} />
-          ),
+          href: null, // Hide from tab bar
         }}
       />
     </Tabs>

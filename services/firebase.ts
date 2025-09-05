@@ -1,8 +1,134 @@
-import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
-import type { User } from '@react-native-google-signin/google-signin';
+
+// Platform-aware imports
+let auth: any;
+let firestore: any;
+let GoogleSignin: any;
+let statusCodes: any;
+let FirebaseAuthTypes: any;
+
+if (Platform.OS === 'web') {
+  // Use Firebase Web SDK for web platform
+  const { getAuth, connectAuthEmulator } = require('firebase/auth');
+  const { getFirestore, connectFirestoreEmulator } = require('firebase/firestore');
+  const { initializeApp, getApps, getApp } = require('firebase/app');
+  
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBsOes01Lnp2leFMN_qJbk-_X6nZIlHvBU",
+    authDomain: "alpha-orbit.firebaseapp.com",
+    projectId: "alpha-orbit",
+    storageBucket: "alpha-orbit.appspot.com",
+    messagingSenderId: "152969284019",
+    appId: "1:152969284019:web:8c2a1d6a7d6a48c52623c6",
+    measurementId: "G-4TB90WRQ97"
+  };
+
+  // Initialize Firebase
+  let app;
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
+  }
+
+  auth = getAuth(app);
+  firestore = getFirestore(app);
+  
+  // Dummy Google Sign-In for web (not supported in web SDK)
+  GoogleSignin = {
+    configure: () => {},
+    signIn: () => Promise.reject(new Error('Google Sign-In not supported on web')),
+    getCurrentUser: () => Promise.resolve(null),
+    getTokens: () => Promise.resolve({ idToken: null }),
+    revokeAccess: () => Promise.resolve(),
+    signOut: () => Promise.resolve(),
+    hasPlayServices: () => Promise.resolve(true)
+  };
+  
+  statusCodes = {
+    SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE'
+  };
+  
+  FirebaseAuthTypes = {
+    UserCredential: class UserCredential {
+      user: any;
+      constructor(user: any) {
+        this.user = user;
+      }
+    }
+  };
+  
+  console.log('✅ Using Firebase Web SDK');
+} else {
+  // Use React Native Firebase for native platforms
+  try {
+    auth = require('@react-native-firebase/auth').default;
+    firestore = require('@react-native-firebase/firestore').default;
+    const googleSignin = require('@react-native-google-signin/google-signin');
+    GoogleSignin = googleSignin.GoogleSignin;
+    statusCodes = googleSignin.statusCodes;
+    FirebaseAuthTypes = require('@react-native-firebase/auth').FirebaseAuthTypes;
+    console.log('✅ Using React Native Firebase');
+  } catch (error) {
+    console.log('⚠️ React Native Firebase not available, using dummy services');
+    // Fallback to dummy implementations
+    auth = () => ({
+      onAuthStateChanged: (callback: any) => {
+        callback(null);
+        return () => {};
+      },
+      signInWithEmailAndPassword: () => Promise.reject(new Error('Firebase not available')),
+      createUserWithEmailAndPassword: () => Promise.reject(new Error('Firebase not available')),
+      signOut: () => Promise.resolve(),
+      sendPasswordResetEmail: () => Promise.reject(new Error('Firebase not available')),
+      currentUser: null,
+      GoogleAuthProvider: {
+        credential: () => ({})
+      }
+    });
+    firestore = () => ({
+      collection: () => ({
+        doc: () => ({
+          get: () => Promise.resolve({ exists: false, data: () => ({}) }),
+          set: () => Promise.resolve(),
+          update: () => Promise.resolve()
+        })
+      }),
+      FieldValue: {
+        arrayUnion: (item: any) => ({ _type: 'arrayUnion', value: item }),
+        arrayRemove: (item: any) => ({ _type: 'arrayRemove', value: item }),
+        serverTimestamp: () => ({ _type: 'serverTimestamp' }),
+        increment: (value: number) => ({ _type: 'increment', value }),
+        delete: () => ({ _type: 'delete' })
+      }
+    });
+    GoogleSignin = {
+      configure: () => {},
+      signIn: () => Promise.reject(new Error('Google Sign-In not available')),
+      getCurrentUser: () => Promise.resolve(null),
+      getTokens: () => Promise.resolve({ idToken: null }),
+      revokeAccess: () => Promise.resolve(),
+      signOut: () => Promise.resolve(),
+      hasPlayServices: () => Promise.resolve(true)
+    };
+    statusCodes = {
+      SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+      IN_PROGRESS: 'IN_PROGRESS',
+      PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE'
+    };
+    FirebaseAuthTypes = {
+      UserCredential: class UserCredential {
+        user: any;
+        constructor(user: any) {
+          this.user = user;
+        }
+      }
+    };
+  }
+}
 
 // ------------------------------------------------------------
 // Google Sign-In Configuration
@@ -16,24 +142,26 @@ import type { User } from '@react-native-google-signin/google-signin';
 // 2. Enable "Sign in with Apple" capability in Xcode
 // 3. Ensure GoogleService-Info.plist has the correct bundle ID (io.dekr.app)
 
-// Configure Google Sign-In with the appropriate client IDs
-GoogleSignin.configure({
-  // The webClientId is your Firebase Web Client ID (used for Android and iOS)
-  // This should match the one in your Firebase console
-  webClientId: '152969284019-p42jnunll1hg2dqdcpqnacvvkjf9b9vs.apps.googleusercontent.com',
-  
-  // iOS-specific client ID from GoogleService-Info.plist (CLIENT_ID value)
-  iosClientId: Platform.OS === 'ios' ? '152969284019-s54gbe5rn0qjoqqjp0h84e3bmt8jat44.apps.googleusercontent.com' : undefined,
-  
-  // Required for offline access
-  offlineAccess: true,
-  
-  // Additional configuration
-  forceCodeForRefreshToken: true,
-  
-  // Requested scopes (permissions)
-  scopes: ['profile', 'email'],
-});
+// Configure Google Sign-In with the appropriate client IDs (only for native platforms)
+if (Platform.OS !== 'web') {
+  GoogleSignin.configure({
+    // The webClientId is your Firebase Web Client ID (used for Android and iOS)
+    // This should match the one in your Firebase console
+    webClientId: '152969284019-p42jnunll1hg2dqdcpqnacvvkjf9b9vs.apps.googleusercontent.com',
+    
+    // iOS-specific client ID from GoogleService-Info.plist (CLIENT_ID value)
+    iosClientId: Platform.OS === 'ios' ? '152969284019-s54gbe5rn0qjoqqjp0h84e3bmt8jat44.apps.googleusercontent.com' : undefined,
+    
+    // Required for offline access
+    offlineAccess: true,
+    
+    // Additional configuration
+    forceCodeForRefreshToken: true,
+    
+    // Requested scopes (permissions)
+    scopes: ['profile', 'email'],
+  });
+}
 
 // ------------------------------------------------------------
 // Google Sign-In Helper Functions
@@ -216,7 +344,13 @@ export const clearGoogleSignInData = async (): Promise<void> => {
 
 export const signInWithEmail = async (email: string, password: string): Promise<FirebaseAuthTypes.UserCredential> => {
   try {
-    return await auth().signInWithEmailAndPassword(email, password);
+    if (Platform.OS === 'web') {
+      const { signInWithEmailAndPassword } = require('firebase/auth');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return new FirebaseAuthTypes.UserCredential(userCredential.user);
+    } else {
+      return await auth().signInWithEmailAndPassword(email, password);
+    }
   } catch (error) {
     console.error('❌ Email Sign-In Error:', error);
     throw error;
@@ -225,7 +359,14 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 
 export const signUpWithEmail = async (email: string, password: string): Promise<FirebaseAuthTypes.UserCredential> => {
   try {
-    const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+    let userCredential;
+    if (Platform.OS === 'web') {
+      const { createUserWithEmailAndPassword } = require('firebase/auth');
+      userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      userCredential = new FirebaseAuthTypes.UserCredential(userCredential.user);
+    } else {
+      userCredential = await auth().createUserWithEmailAndPassword(email, password);
+    }
     
     // Create user profile for new email users
     await createUserProfileIfNeeded(userCredential.user);
@@ -243,10 +384,17 @@ export const signUpWithEmail = async (email: string, password: string): Promise<
 
 export const signOut = async (): Promise<void> => {
   try {
-    // Clear Google Sign-In data first
-    await clearGoogleSignInData();
+    // Clear Google Sign-In data first (only for native platforms)
+    if (Platform.OS !== 'web') {
+      await clearGoogleSignInData();
+    }
     // Then sign out from Firebase
-    await auth().signOut();
+    if (Platform.OS === 'web') {
+      const { signOut: webSignOut } = require('firebase/auth');
+      await webSignOut(auth);
+    } else {
+      await auth().signOut();
+    }
   } catch (error) {
     console.error('❌ Sign-Out Error:', error);
     throw error;
@@ -255,7 +403,12 @@ export const signOut = async (): Promise<void> => {
 
 export const resetPassword = async (email: string): Promise<void> => {
   try {
-    await auth().sendPasswordResetEmail(email);
+    if (Platform.OS === 'web') {
+      const { sendPasswordResetEmail } = require('firebase/auth');
+      await sendPasswordResetEmail(auth, email);
+    } else {
+      await auth().sendPasswordResetEmail(email);
+    }
   } catch (error) {
     console.error('❌ Password Reset Error:', error);
     throw error;
@@ -268,25 +421,49 @@ export const resetPassword = async (email: string): Promise<void> => {
 
 export async function saveToWatchlist(userId: string, item: any) {
   try {
-    const watchlistRef = firestore().collection('watchlists').doc(userId);
-    const watchlistDoc = await watchlistRef.get();
+    if (Platform.OS === 'web') {
+      const { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp } = require('firebase/firestore');
+      const watchlistRef = doc(firestore, 'watchlists', userId);
+      const watchlistDoc = await getDoc(watchlistRef);
 
-    if (watchlistDoc.exists) {
-      // Update existing watchlist
-      const currentItems = watchlistDoc.data()?.items || [];
-      if (!currentItems.find((i: any) => i.id === item.id)) {
-        await watchlistRef.update({
-          items: firestore.FieldValue.arrayUnion(item),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
+      if (watchlistDoc.exists()) {
+        // Update existing watchlist
+        const currentItems = watchlistDoc.data()?.items || [];
+        if (!currentItems.find((i: any) => i.id === item.id)) {
+          await updateDoc(watchlistRef, {
+            items: arrayUnion(item),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      } else {
+        // Create new watchlist
+        await setDoc(watchlistRef, {
+          items: [item],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
       }
     } else {
-      // Create new watchlist
-      await watchlistRef.set({
-        items: [item],
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+      const watchlistRef = firestore().collection('watchlists').doc(userId);
+      const watchlistDoc = await watchlistRef.get();
+
+      if (watchlistDoc.exists) {
+        // Update existing watchlist
+        const currentItems = watchlistDoc.data()?.items || [];
+        if (!currentItems.find((i: any) => i.id === item.id)) {
+          await watchlistRef.update({
+            items: firestore.FieldValue.arrayUnion(item),
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      } else {
+        // Create new watchlist
+        await watchlistRef.set({
+          items: [item],
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+      }
     }
   } catch (error) {
     console.error('Error saving to watchlist:', error);
@@ -296,13 +473,24 @@ export async function saveToWatchlist(userId: string, item: any) {
 
 export async function loadWatchlist(userId: string) {
   try {
-    const watchlistRef = firestore().collection('watchlists').doc(userId);
-    const watchlistDoc = await watchlistRef.get();
+    if (Platform.OS === 'web') {
+      const { doc, getDoc } = require('firebase/firestore');
+      const watchlistRef = doc(firestore, 'watchlists', userId);
+      const watchlistDoc = await getDoc(watchlistRef);
 
-    if (watchlistDoc.exists) {
-      return watchlistDoc.data()?.items || [];
+      if (watchlistDoc.exists()) {
+        return watchlistDoc.data()?.items || [];
+      }
+      return [];
+    } else {
+      const watchlistRef = firestore().collection('watchlists').doc(userId);
+      const watchlistDoc = await watchlistRef.get();
+
+      if (watchlistDoc.exists) {
+        return watchlistDoc.data()?.items || [];
+      }
+      return [];
     }
-    return [];
   } catch (error) {
     console.error('Error loading watchlist:', error);
     throw error;
@@ -311,20 +499,41 @@ export async function loadWatchlist(userId: string) {
 
 export async function removeFromWatchlist(itemId: string) {
   try {
-    const user = auth().currentUser;
+    let user;
+    if (Platform.OS === 'web') {
+      user = auth.currentUser;
+    } else {
+      user = auth().currentUser;
+    }
     if (!user) throw new Error('No user logged in');
 
-    const watchlistRef = firestore().collection('watchlists').doc(user.uid);
-    const watchlistDoc = await watchlistRef.get();
+    if (Platform.OS === 'web') {
+      const { doc, getDoc, updateDoc, serverTimestamp } = require('firebase/firestore');
+      const watchlistRef = doc(firestore, 'watchlists', user.uid);
+      const watchlistDoc = await getDoc(watchlistRef);
 
-    if (watchlistDoc.exists) {
-      const currentItems = watchlistDoc.data()?.items || [];
-      const updatedItems = currentItems.filter((item: any) => item.id !== itemId);
-      
-      await watchlistRef.update({
-        items: updatedItems,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+      if (watchlistDoc.exists()) {
+        const currentItems = watchlistDoc.data()?.items || [];
+        const updatedItems = currentItems.filter((item: any) => item.id !== itemId);
+        
+        await updateDoc(watchlistRef, {
+          items: updatedItems,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } else {
+      const watchlistRef = firestore().collection('watchlists').doc(user.uid);
+      const watchlistDoc = await watchlistRef.get();
+
+      if (watchlistDoc.exists) {
+        const currentItems = watchlistDoc.data()?.items || [];
+        const updatedItems = currentItems.filter((item: any) => item.id !== itemId);
+        
+        await watchlistRef.update({
+          items: updatedItems,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+      }
     }
   } catch (error) {
     console.error('Error removing from watchlist:', error);
@@ -333,32 +542,59 @@ export async function removeFromWatchlist(itemId: string) {
 }
 
 // Helper function to create a user profile if it doesn't exist
-async function createUserProfileIfNeeded(user: FirebaseAuthTypes.User): Promise<void> {
+async function createUserProfileIfNeeded(user: any): Promise<void> {
   try {
     if (!user) return;
     
-    // Check if user document already exists
-    const userRef = firestore().collection('users').doc(user.uid);
-    const userDoc = await userRef.get();
-    
-    if (!userDoc.exists) {
-      // Create new user profile
-      const userData = {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || '',
-        photoURL: user.photoURL || '',
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        watchlist: [],
-        settings: {
-          pushNotifications: true,
-          emailNotifications: true,
-          theme: 'auto'
-        }
-      };
+    if (Platform.OS === 'web') {
+      const { doc, getDoc, setDoc, serverTimestamp } = require('firebase/firestore');
+      // Check if user document already exists
+      const userRef = doc(firestore, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
       
-      await userRef.set(userData);
-      console.log('✅ Created new user profile for:', user.uid);
+      if (!userDoc.exists()) {
+        // Create new user profile
+        const userData = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+          createdAt: serverTimestamp(),
+          watchlist: [],
+          settings: {
+            pushNotifications: true,
+            emailNotifications: true,
+            theme: 'auto'
+          }
+        };
+        
+        await setDoc(userRef, userData);
+        console.log('✅ Created new user profile for:', user.uid);
+      }
+    } else {
+      // Check if user document already exists
+      const userRef = firestore().collection('users').doc(user.uid);
+      const userDoc = await userRef.get();
+      
+      if (!userDoc.exists) {
+        // Create new user profile
+        const userData = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          watchlist: [],
+          settings: {
+            pushNotifications: true,
+            emailNotifications: true,
+            theme: 'auto'
+          }
+        };
+        
+        await userRef.set(userData);
+        console.log('✅ Created new user profile for:', user.uid);
+      }
     }
   } catch (error) {
     console.error('❌ Error creating user profile:', error);

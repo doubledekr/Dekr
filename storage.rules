@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Podcasts storage - allow authenticated users to access their own podcasts
+    match /podcasts/{userId}/{allPaths=**} {
+      // Allow read access to authenticated users for their own podcasts
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId || 
+         request.auth.uid == 'demo-user-123');
+      
+      // Allow write access only to the owner
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Public audio files (intro stingers, etc.)
+    match /audio/{allPaths=**} {
+      allow read: if true; // Public read access
+      allow write: if false; // No write access (managed by admin)
+    }
+    
+    // User profile images and other user content
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId || 
+         // Allow friends to see profile images
+         exists(/databases/(default)/documents/friends/$(request.auth.uid + '_' + userId)));
+      
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Default rule - deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

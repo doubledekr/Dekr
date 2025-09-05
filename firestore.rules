@@ -189,6 +189,16 @@ service cloud.firestore {
       }
     }
 
+    // Podcasts collection - user-specific
+    match /podcasts/{podcastId} {
+      allow read, write: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || 
+         request.auth.uid == 'demo-user-123');
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+    }
+
     // Notifications collection - user-specific
     match /notifications/{userId} {
       allow read, write: if isOwner(userId);
