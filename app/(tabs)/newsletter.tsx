@@ -66,13 +66,33 @@ export default function NewsletterScreen() {
     if (!user) return;
     
     try {
+      console.log('🎧 Loading podcasts for user:', user.uid);
       const podcasts = await podcastService.getUserPodcasts(user.uid, 5);
+      console.log('🎧 Retrieved podcasts:', podcasts.length, podcasts);
       setUserPodcasts(podcasts);
       
       // Set the most recent podcast as current if available
       if (podcasts.length > 0) {
         setCurrentPodcastUrl(podcasts[0].audioUrl);
-        console.log('🎧 Loaded existing podcast:', podcasts[0].id);
+        console.log('🎧 Loaded existing podcast:', podcasts[0].id, 'URL:', podcasts[0].audioUrl);
+      } else {
+        console.log('🎧 No podcasts found for user:', user.uid);
+        
+        // For demo users, create the initial demo podcast if none exists
+        if (user.uid === 'demo-user-123') {
+          console.log('🎙️ Creating initial demo podcast for demo user...');
+          try {
+            const demoPodcast = await podcastService.createInitialDemoPodcast();
+            setUserPodcasts([demoPodcast]);
+            setCurrentPodcastUrl(demoPodcast.audioUrl);
+            console.log('✅ Demo podcast created and loaded:', demoPodcast.id);
+          } catch (error) {
+            console.error('❌ Failed to create demo podcast:', error);
+            setCurrentPodcastUrl(null);
+          }
+        } else {
+          setCurrentPodcastUrl(null);
+        }
       }
     } catch (error) {
       console.error('Error loading user podcasts:', error);
