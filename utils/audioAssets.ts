@@ -2,6 +2,12 @@
 export const getAudioAsset = (audioUrl: string) => {
   console.log('🔊 getAudioAsset called with:', audioUrl);
   
+  // Check if it's an external URL (http/https/blob)
+  if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://') || audioUrl.startsWith('blob:')) {
+    console.log('🔊 External URL detected, returning URL directly:', audioUrl);
+    return { uri: audioUrl };
+  }
+  
   // Extract filename from the audioUrl, handling both /audio/filename.mp3 and filename.mp3 formats
   const filename = audioUrl.split('/').pop();
   console.log('🔊 Extracted filename:', filename);

@@ -2,7 +2,6 @@ import OpenAI from 'openai';
 import { firestore } from './firebase';
 import { Platform } from 'react-native';
 import { logEvent, AnalyticsEvents } from './analytics';
-import { podcastService } from './PodcastService';
 
 export interface Newsletter {
   id: string;
@@ -248,15 +247,8 @@ export class NewsletterService {
       const newsletter = await this.generateWeeklyNewsletter();
       
       // If userId is provided, also generate a podcast
+      // Podcast generation removed - focusing on Weekly Community Podcast only
       let podcastUrl: string | undefined;
-      if (userId) {
-        try {
-          const podcast = await podcastService.generatePodcast(userId);
-          podcastUrl = podcast.audioUrl;
-        } catch (podcastError) {
-          console.warn('Could not generate podcast, continuing with newsletter only:', podcastError);
-        }
-      }
 
       return { newsletter, podcastUrl };
     } catch (error) {

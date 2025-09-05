@@ -30,6 +30,12 @@ service firebase.storage {
       allow write: if false; // No write access (managed by admin)
     }
     
+    // Weekly community podcasts - public access for all users
+    match /weekly-podcasts/{allPaths=**} {
+      allow read: if true; // Public read access for all users
+      allow write: if isAuthenticated(); // Authenticated users can upload
+    }
+    
     // User profile images and other user content
     match /users/{userId}/{allPaths=**} {
       allow read: if isAuthenticated() && 

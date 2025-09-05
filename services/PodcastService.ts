@@ -31,18 +31,14 @@ export interface UserPodcastPreferences {
     includePersonalizedInsights: boolean;
     preferredLength: 'short' | 'medium' | 'long'; // 2min, 3min, 5min
   };
-  // Additional properties for demo users
-  preferredLength?: 'short' | 'medium' | 'long';
-  interests?: string[];
-  experienceLevel?: string;
 }
 
 export class PodcastService {
   private openai: OpenAI;
   private db: any;
   private storage: any;
-  private elevenLabsApiKey: string;
-  private elevenLabsBaseUrl: string = 'https://api.elevenlabs.io/v1';
+  private autocontentApiKey: string;
+  private autocontentBaseUrl: string = 'https://api.autocontentapi.com';
 
   // Available intro stingers
   private introStingers: string[] = [
@@ -69,7 +65,7 @@ export class PodcastService {
       dangerouslyAllowBrowser: true
     });
     this.db = firestore;
-    this.elevenLabsApiKey = process.env.EXPO_PUBLIC_ELEVENLABS_API_KEY || '';
+    this.autocontentApiKey = process.env.EXPO_PUBLIC_AUTOCONTENT_API_KEY || '';
     
     // Initialize Firebase Storage
     if (Platform.OS === 'web') {
@@ -198,49 +194,44 @@ And that, my friends, is how you build wealth that lasts.
 Until next week, keep your charts close and your stop-losses closer. This is your Dekr Weekly, and I'll see you on the trading floor. Thanks for being part of the Dekr community - that's D-E-K-R, pronounced "Decker" - where smart traders come to learn, share, and succeed together.`;
   }
 
-  // Generate voice using ElevenLabs API
+  // Generate voice using AutoContent API
   private async generateVoice(script: string, voiceId: string): Promise<ArrayBuffer> {
     try {
-      console.log('Generating voice with ElevenLabs API...');
+      console.log('🎙️ Generating voice with AutoContent API...');
       console.log('Script length:', script.length);
       console.log('Voice ID:', voiceId);
       
       // Check if API key is available
-      if (!this.elevenLabsApiKey || this.elevenLabsApiKey === 'your-elevenlabs-api-key-here') {
-        throw new Error('ElevenLabs API key not configured. Please add EXPO_PUBLIC_ELEVENLABS_API_KEY to your .env file.');
+      if (!this.autocontentApiKey) {
+        throw new Error('AutoContent API key not configured.');
       }
 
-      const response = await fetch(`${this.elevenLabsBaseUrl}/text-to-speech/${voiceId}`, {
+      const response = await fetch(`${this.autocontentBaseUrl}/text-to-speech/${voiceId}`, {
         method: 'POST',
         headers: {
           'Accept': 'audio/mpeg',
           'Content-Type': 'application/json',
-          'xi-api-key': this.elevenLabsApiKey
+          'Authorization': `Bearer ${this.autocontentApiKey}`
         },
         body: JSON.stringify({
           text: script,
-          model_id: 'eleven_monolingual_v1',
-          voice_settings: {
-            stability: 0.3, // Lower stability for more variation and expressiveness
-            similarity_boost: 0.7, // Higher similarity to maintain voice character
-            style: 0.4, // Higher style for more emotional expression
-            use_speaker_boost: true
-          }
+          voice_id: voiceId,
+          output_format: 'mp3'
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('ElevenLabs API error:', response.status, errorText);
-        throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+        console.error('AutoContent API error:', response.status, errorText);
+        throw new Error(`AutoContent API error: ${response.status} - ${errorText}`);
       }
 
       const audioBuffer = await response.arrayBuffer();
-      console.log('Voice generation successful, audio size:', audioBuffer.byteLength);
+      console.log('✅ Voice generation successful with AutoContent, audio size:', audioBuffer.byteLength);
       
       return audioBuffer;
     } catch (error) {
-      console.error('Error generating voice:', error);
+      console.error('Error generating voice with AutoContent:', error);
       throw error;
     }
   }
@@ -614,235 +605,26 @@ Until next week, keep your charts close and your stop-losses closer. This is you
     }
   }
 
-  // Check if demo user already has a podcast
-  private async getExistingDemoPodcast(): Promise<PodcastData | null> {
-    try {
-      if (Platform.OS === 'web') {
-        const { collection, query, where, getDocs } = require('firebase/firestore');
-        const podcastsRef = collection(this.db, 'podcasts');
-        const q = query(
-          podcastsRef,
-          where('userId', '==', 'demo-user-123')
-        );
-        
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          // Sort by createdAt in memory to avoid composite index requirement
-          const podcasts = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          } as PodcastData));
-          
-          // Sort by createdAt descending and get the most recent
-          podcasts.sort((a, b) => {
-            const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-            const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
-            return bTime - aTime;
-          });
-          
-          const mostRecent = podcasts[0];
-          console.log('✅ Found existing demo podcast:', mostRecent.id);
-          return mostRecent;
-        }
-      } else {
-        const snapshot = await this.db.collection('podcasts')
-          .where('userId', '==', 'demo-user-123')
-          .get();
 
-        if (!snapshot.empty) {
-          // Sort by createdAt in memory to avoid composite index requirement
-          const podcasts = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          } as PodcastData));
-          
-          // Sort by createdAt descending and get the most recent
-          podcasts.sort((a, b) => {
-            const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-            const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
-            return bTime - aTime;
-          });
-          
-          const mostRecent = podcasts[0];
-          console.log('✅ Found existing demo podcast:', mostRecent.id);
-          return mostRecent;
-        }
-      }
-      return null;
-    } catch (error) {
-      console.warn('⚠️ Error checking for existing demo podcast:', error);
-      return null;
-    }
-  }
-
-  // Create and store the initial demo podcast
-  async createInitialDemoPodcast(): Promise<PodcastData> {
-    try {
-      console.log('🎙️ Creating initial demo podcast...');
-      
-      // Check if demo podcast already exists
-      const existingPodcast = await this.getExistingDemoPodcast();
-      if (existingPodcast) {
-        console.log('✅ Demo podcast already exists, returning existing one');
-        return existingPodcast;
-      }
-
-      // Demo user preferences
-      const userData: UserPodcastPreferences = {
-        uid: 'demo-user-123',
-        email: 'demo@dekr.com',
-        preferredVoiceId: 'EozfaQ3ZX0esAp1cW5nG',
-        preferredLength: 'medium',
-        interests: ['trading', 'markets', 'finance'],
-        experienceLevel: 'intermediate',
-        podcastPreferences: {
-          includeMarketAnalysis: true,
-          includeCommunityHighlights: true,
-          includeEducationalContent: true,
-          includePersonalizedInsights: true,
-          preferredLength: 'medium'
-        }
-      };
-
-      // Generate script
-      const script = await this.generatePodcastScript(userData, {});
-      
-      // Generate voice
-      const voiceBuffer = await this.generateVoice(script, userData.preferredVoiceId);
-      
-      // Select and load intro stinger
-      const introStinger = this.selectRandomIntro();
-      const introStingerBuffer = await this.loadIntroStinger(introStinger);
-      
-      // Select and load intro track
-      const introTrack = this.selectRandomIntroTrack();
-      const introTrackBuffer = await this.loadIntroTrack(introTrack);
-      
-      // Select and load outro track
-      const outroTrack = this.selectRandomOutroTrack();
-      const outroTrackBuffer = await this.loadOutroTrack(outroTrack);
-      
-      // Mix audio
-      const finalAudioBuffer = await this.mixAudio(introStingerBuffer, voiceBuffer, introTrackBuffer, outroTrackBuffer);
-      
-      // Upload to storage
-      const audioUrl = await this.uploadPodcastToStorage('demo-user-123', finalAudioBuffer);
-      
-      // Create podcast document
-      const podcastData: PodcastData = {
-        id: `demo_podcast_${Date.now()}`,
-        userId: 'demo-user-123',
-        title: 'Demo Podcast - Weekly Market Update',
-        script,
-        audioUrl,
-        duration: 180, // 3 minutes
-        createdAt: this.createTimestamp(new Date()),
-        voiceId: userData.preferredVoiceId,
-        introStinger,
-        backgroundMusic: `${introTrack} + ${outroTrack}`,
-        status: 'completed'
-      };
-
-      // Save to Firestore
-      if (Platform.OS === 'web') {
-        const { collection, addDoc } = require('firebase/firestore');
-        const podcastsRef = collection(this.db, 'podcasts');
-        await addDoc(podcastsRef, podcastData);
-        console.log('✅ Demo podcast saved to Firestore');
-      } else {
-        await this.db.collection('podcasts').add(podcastData);
-        console.log('✅ Demo podcast saved to Firestore');
-      }
-
-      // Create demo user document
-      const userRef = Platform.OS === 'web' 
-        ? require('firebase/firestore').doc(this.db, 'users', 'demo-user-123')
-        : this.db.collection('users').doc('demo-user-123');
-      
-      if (Platform.OS === 'web') {
-        const { setDoc } = require('firebase/firestore');
-        await setDoc(userRef, {
-          uid: 'demo-user-123',
-          email: 'demo@dekr.com',
-          displayName: 'Demo User',
-          lastPodcast: this.getServerTimestamp(),
-          lastPodcastUrl: audioUrl,
-          createdAt: this.getServerTimestamp(),
-          podcastPreferences: userData.podcastPreferences
-        });
-      } else {
-        await userRef.set({
-          uid: 'demo-user-123',
-          email: 'demo@dekr.com',
-          displayName: 'Demo User',
-          lastPodcast: this.getServerTimestamp(),
-          lastPodcastUrl: audioUrl,
-          createdAt: this.getServerTimestamp(),
-          podcastPreferences: userData.podcastPreferences
-        });
-      }
-      
-      console.log('✅ Demo user document created in Firestore');
-      console.log('🎧 Demo podcast created successfully:', podcastData.id);
-      
-      return podcastData;
-    } catch (error) {
-      console.error('Error creating initial demo podcast:', error);
-      throw error;
-    }
-  }
 
   // Generate complete podcast for a user
   async generatePodcast(uid: string): Promise<PodcastData> {
     try {
       console.log('🎙️ PodcastService.generatePodcast called for user:', uid);
       
-      // Check if demo user already has a podcast
-      if (uid === 'demo-user-123') {
-        const existingPodcast = await this.getExistingDemoPodcast();
-        if (existingPodcast) {
-          console.log('🎧 Returning existing demo podcast');
-          return existingPodcast;
-        }
-      }
       
       logEvent(AnalyticsEvents.CREATE_PODCAST, {
         user_id: uid,
         timestamp: new Date().toISOString(),
       });
 
-      // 1. Get user preferences (handle demo users)
-      let userData: UserPodcastPreferences;
-      let voiceId = 'EozfaQ3ZX0esAp1cW5nG'; // Default voice
-      
-      if (uid === 'demo-user-123') {
-        // Demo user - use default preferences
-        console.log('Using demo user preferences');
-        userData = {
-          uid: 'demo-user-123',
-          email: 'demo@dekr.com',
-          preferredVoiceId: 'EozfaQ3ZX0esAp1cW5nG',
-          preferredLength: 'medium',
-          interests: ['trading', 'markets', 'finance'],
-          experienceLevel: 'intermediate',
-          podcastPreferences: {
-            includeMarketAnalysis: true,
-            includeCommunityHighlights: true,
-            includeEducationalContent: true,
-            includePersonalizedInsights: true,
-            preferredLength: 'medium'
-          }
-        };
-        voiceId = userData.preferredVoiceId;
-      } else {
-        // Real user - get from Firestore
-        const userDoc = await this.db.collection('users').doc(uid).get();
-        if (!userDoc.exists) {
-          throw new Error('User not found');
-        }
-        userData = userDoc.data() as UserPodcastPreferences;
-        voiceId = userData.preferredVoiceId || 'EozfaQ3ZX0esAp1cW5nG';
+      // 1. Get user preferences
+      const userDoc = await this.db.collection('users').doc(uid).get();
+      if (!userDoc.exists) {
+        throw new Error('User not found');
       }
+      const userData = userDoc.data() as UserPodcastPreferences;
+      const voiceId = userData.preferredVoiceId || 'EozfaQ3ZX0esAp1cW5nG';
 
       // 2. Generate script
       const script = await this.generatePodcastScript(userData, {});
@@ -897,60 +679,12 @@ Until next week, keep your charts close and your stop-losses closer. This is you
         await this.db.collection('podcasts').add(podcastData);
         console.log('✅ Podcast metadata saved to Firestore');
         
-        // 11. Update user's last podcast info (create demo user doc if needed)
-        if (uid === 'demo-user-123') {
-          // Ensure demo user document exists
-          const userRef = Platform.OS === 'web' 
-            ? require('firebase/firestore').doc(this.db, 'users', uid)
-            : this.db.collection('users').doc(uid);
-          
-          if (Platform.OS === 'web') {
-            const { setDoc, getDoc } = require('firebase/firestore');
-            const userDoc = await getDoc(userRef);
-            if (!userDoc.exists()) {
-              await setDoc(userRef, {
-                uid: 'demo-user-123',
-                email: 'demo@dekr.com',
-                displayName: 'Demo User',
-                lastPodcast: this.getServerTimestamp(),
-                lastPodcastUrl: audioUrl,
-                createdAt: this.getServerTimestamp()
-              });
-              console.log('✅ Created demo user document in Firestore');
-            } else {
-              await require('firebase/firestore').updateDoc(userRef, {
-                lastPodcast: this.getServerTimestamp(),
-                lastPodcastUrl: audioUrl
-              });
-              console.log('✅ Updated demo user podcast info in Firestore');
-            }
-          } else {
-            const userDoc = await userRef.get();
-            if (!userDoc.exists) {
-              await userRef.set({
-                uid: 'demo-user-123',
-                email: 'demo@dekr.com',
-                displayName: 'Demo User',
-                lastPodcast: this.getServerTimestamp(),
-                lastPodcastUrl: audioUrl,
-                createdAt: this.getServerTimestamp()
-              });
-              console.log('✅ Created demo user document in Firestore');
-            } else {
-              await userRef.update({
-                lastPodcast: this.getServerTimestamp(),
-                lastPodcastUrl: audioUrl
-              });
-              console.log('✅ Updated demo user podcast info in Firestore');
-            }
-          }
-        } else {
-          await this.db.collection('users').doc(uid).update({
-            lastPodcast: this.getServerTimestamp(),
-            lastPodcastUrl: audioUrl
-          });
-          console.log('✅ User podcast info updated in Firestore');
-        }
+        // 11. Update user's last podcast info
+        await this.db.collection('users').doc(uid).update({
+          lastPodcast: this.getServerTimestamp(),
+          lastPodcastUrl: audioUrl
+        });
+        console.log('✅ User podcast info updated in Firestore');
       } catch (firestoreError) {
         console.warn('⚠️ Firestore operations failed, but podcast was generated:', firestoreError);
         // Continue even if Firestore fails - the podcast is still generated
@@ -1032,11 +766,6 @@ Until next week, keep your charts close and your stop-losses closer. This is you
   // Get user's podcast history
   async getUserPodcasts(uid: string, limit: number = 10): Promise<PodcastData[]> {
     try {
-      // For demo users, always return the demo podcast
-      if (uid === 'demo-user-123') {
-        const demoPodcast = await this.getExistingDemoPodcast();
-        return demoPodcast ? [demoPodcast] : [];
-      }
       
       if (Platform.OS === 'web') {
         const { collection, query, where, getDocs } = require('firebase/firestore');

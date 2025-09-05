@@ -22,9 +22,9 @@ import {
 import { useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Newsletter, newsletterService } from '../../services/NewsletterService';
-import { podcastService } from '../../services/PodcastService';
 import { useAppSelector } from '../../store/hooks';
 import { safeHapticImpact } from '../../utils/haptics';
+import { WeeklyPodcastCard } from '../../components/WeeklyPodcastCard';
 
 export default function NewsletterScreen() {
   const theme = useTheme();
@@ -37,13 +37,9 @@ export default function NewsletterScreen() {
   const [isGeneratingPodcast, setIsGeneratingPodcast] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [currentPodcastUrl, setCurrentPodcastUrl] = useState<string | null>(null);
-  const [userPodcasts, setUserPodcasts] = useState<any[]>([]);
 
   useEffect(() => {
     loadNewsletters();
-    if (user) {
-      loadUserPodcasts();
-    }
   }, [user]);
 
   const loadNewsletters = async () => {
@@ -62,49 +58,10 @@ export default function NewsletterScreen() {
     }
   };
 
-  const loadUserPodcasts = async () => {
-    if (!user) return;
-    
-    try {
-      console.log('🎧 Loading podcasts for user:', user.uid);
-      const podcasts = await podcastService.getUserPodcasts(user.uid, 5);
-      console.log('🎧 Retrieved podcasts:', podcasts.length, podcasts);
-      setUserPodcasts(podcasts);
-      
-      // Set the most recent podcast as current if available
-      if (podcasts.length > 0) {
-        setCurrentPodcastUrl(podcasts[0].audioUrl);
-        console.log('🎧 Loaded existing podcast:', podcasts[0].id, 'URL:', podcasts[0].audioUrl);
-      } else {
-        console.log('🎧 No podcasts found for user:', user.uid);
-        
-        // For demo users, create the initial demo podcast if none exists
-        if (user.uid === 'demo-user-123') {
-          console.log('🎙️ Creating initial demo podcast for demo user...');
-          try {
-            const demoPodcast = await podcastService.createInitialDemoPodcast();
-            setUserPodcasts([demoPodcast]);
-            setCurrentPodcastUrl(demoPodcast.audioUrl);
-            console.log('✅ Demo podcast created and loaded:', demoPodcast.id);
-          } catch (error) {
-            console.error('❌ Failed to create demo podcast:', error);
-            setCurrentPodcastUrl(null);
-          }
-        } else {
-          setCurrentPodcastUrl(null);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading user podcasts:', error);
-    }
-  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadNewsletters();
-    if (user) {
-      await loadUserPodcasts();
-    }
     setRefreshing(false);
   };
 
@@ -152,7 +109,6 @@ export default function NewsletterScreen() {
       
       setCurrentPodcastUrl(result.podcastUrl || null);
       await loadNewsletters(); // Refresh the list
-      await loadUserPodcasts(); // Refresh podcasts
       
       if (result.podcastUrl) {
         Alert.alert('Success', 'Podcast newsletter generated successfully! Check the audio player below.');
@@ -287,69 +243,27 @@ export default function NewsletterScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Current Podcast Player */}
+        {/* Weekly Community Podcast */}
+        <WeeklyPodcastCard 
+          onPlay={(audioUrl) => setCurrentPodcastUrl(audioUrl)}
+        />
+
+        {/* Audio Player for Weekly Community Podcast */}
         {currentPodcastUrl && (
           <Card style={[styles.newsletterCard, { backgroundColor: theme.colors.surface }]}>
             <Card.Content>
               <View style={styles.podcastHeader}>
                 <Icon source="headphones" size={24} color={theme.colors.primary} />
                 <Title style={[styles.podcastTitle, { color: theme.colors.onSurface }]}>
-                  {user?.uid === 'demo-user-123' ? 'Demo Podcast' : 'Latest Podcast'}
+                  Weekly Community Podcast
                 </Title>
               </View>
-              {user?.uid === 'demo-user-123' && (
-                <Paragraph style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginBottom: 8 }}>
-                  This is a locked demo podcast showcasing our audio features
-                </Paragraph>
-              )}
               <ReactNativeAudioPlayer
                 audioUrl={currentPodcastUrl}
-                title="Weekly Market Update"
+                title="Weekly Community Podcast"
               />
             </Card.Content>
           </Card>
-        )}
-
-        {/* Previous Podcasts */}
-        {userPodcasts.length > 1 && (
-          <View style={styles.previousPodcasts}>
-            <Title style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-              Previous Podcasts
-            </Title>
-            {userPodcasts.slice(1).map((podcast) => (
-              <Card 
-                key={podcast.id} 
-                style={[styles.previousPodcastCard, { backgroundColor: theme.colors.surface }]}
-                onPress={() => setCurrentPodcastUrl(podcast.audioUrl)}
-              >
-                <Card.Content>
-                  <View style={styles.previousPodcastHeader}>
-                    <Text style={[styles.previousPodcastTitle, { color: theme.colors.onSurface }]}>
-                      {podcast.title}
-                    </Text>
-                    <Text style={[styles.previousPodcastDate, { color: theme.colors.onSurfaceVariant }]}>
-                      {formatDate(podcast.createdAt)}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.previousPodcastStats}>
-                    <View style={styles.statItem}>
-                      <MaterialCommunityIcons name="clock" size={14} color={theme.colors.onSurfaceVariant} />
-                      <Text style={[styles.statText, { color: theme.colors.onSurfaceVariant }]}>
-                        {Math.round(podcast.duration / 60)}m
-                      </Text>
-                    </View>
-                    <View style={styles.statItem}>
-                      <MaterialCommunityIcons name="microphone" size={14} color={theme.colors.onSurfaceVariant} />
-                      <Text style={[styles.statText, { color: theme.colors.onSurfaceVariant }]}>
-                        {podcast.voiceId ? 'AI Voice' : 'Generated'}
-                      </Text>
-                    </View>
-                  </View>
-                </Card.Content>
-              </Card>
-            ))}
-          </View>
         )}
 
         {/* Current Newsletter */}
@@ -477,8 +391,8 @@ export default function NewsletterScreen() {
         )}
       </ScrollView>
 
-      {/* Generate buttons - hidden for demo users */}
-      {user && user.uid !== 'demo-user-123' ? (
+      {/* Generate buttons */}
+      {user ? (
         <View style={styles.fabContainer}>
           <FAB
             icon="microphone"
@@ -653,30 +567,5 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 20,
     fontWeight: '600',
-  },
-  audioPlayer: {
-    marginTop: 8,
-  },
-  previousPodcasts: {
-    padding: 16,
-  },
-  previousPodcastCard: {
-    marginBottom: 12,
-    elevation: 2,
-  },
-  previousPodcastHeader: {
-    marginBottom: 8,
-  },
-  previousPodcastTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  previousPodcastDate: {
-    fontSize: 12,
-  },
-  previousPodcastStats: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
   },
 });
