@@ -11,7 +11,10 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "figma:fetch": "node scripts/fetchFigmaFrame.js",
+    "figma:convert": "node scripts/convertFrame.js",
+    "figma:full": "npm run figma:fetch && npm run figma:convert"
   },
   "jest": {
     "preset": "jest-expo"
@@ -32,6 +35,7 @@
     "@reduxjs/toolkit": "^2.5.1",
     "@shopify/react-native-skia": "1.5.0",
     "axios": "^1.7.9",
+    "dotenv": "^17.2.2",
     "expo": "~52.0.36",
     "expo-av": "~15.0.2",
     "expo-blur": "~14.0.3",
@@ -54,6 +58,7 @@
     "expo-system-ui": "~4.0.9",
     "expo-updates": "~0.27.4",
     "expo-web-browser": "~14.0.2",
+    "figma-api": "^2.0.2-beta",
     "firebase": "^12.2.1",
     "fuse.js": "^7.1.0",
     "openai": "^4.83.0",

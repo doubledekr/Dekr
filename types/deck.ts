@@ -123,3 +123,86 @@ export interface DeckProgress {
   lastAccessed: Date;
   timeSpent: number; // in seconds
 }
+
+export interface PredictionCard {
+  id: string;
+  type: 'prediction';
+  username: string;
+  avatar: string;
+  prediction: {
+    symbol: string;
+    direction: 'up' | 'down';
+    targetPrice?: number;
+    confidence: number;
+    reasoning: string;
+  };
+  isRevealed: boolean;
+  submittedAt: Date;
+  accuracy?: number; // calculated after competition ends
+}
+
+export interface WeeklyCompetitionDeck {
+  id: string;
+  title: string;
+  description: string;
+  symbol: string;
+  endDate: Date;
+  status: 'active' | 'completed';
+  prizeAmount: number;
+  maxParticipants?: number;
+  participants: Array<{
+    userId: string;
+    displayName: string;
+    avatar: string;
+  }>;
+  predictionCards: PredictionCard[];
+  userSubmitted: boolean;
+  creatorId: string;
+}
+
+export interface FriendRequestCard {
+  id: string;
+  type: 'friend_request';
+  fromUserId: string;
+  username: string;
+  avatar: string;
+  mutualFriends: number;
+  requestMessage?: string;
+  sentAt: Date;
+  interests: string[];
+  reputation: number;
+  isExpert: boolean;
+}
+
+export interface PublicProfileCard {
+  id: string;
+  type: 'public_profile';
+  userId: string;
+  username: string;
+  avatar: string;
+  bio: string;
+  interests: string[];
+  reputation: number;
+  isExpert: boolean;
+  portfolioPerformance?: number;
+  mutualConnections: number;
+  recentAchievements: string[];
+  lastActive: Date;
+}
+
+export interface FriendCardData {
+  id: string;
+  type: 'friend';
+  userId: string;
+  username: string;
+  avatar: string;
+  status: 'online' | 'offline';
+  recentActivity: string;
+  mutualFriends: number;
+  portfolioPerformance?: number;
+  lastInteraction: Date;
+  reputation: number;
+  isExpert: boolean;
+  interests: string[];
+  recentAchievements: string[];
+}
