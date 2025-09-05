@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,10 +8,12 @@ import {
   Dimensions,
 } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEducation } from '../../../contexts/EducationContext';
+import { StageDeckBrowser } from '../../../components/education/StageDeckBrowser';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +21,10 @@ export function EducationScreen() {
   const { user, stages, loading } = useEducation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const [index, setIndex] = useState(0);
+  const [routes] = useState([
+    { key: 'stages', title: 'Learning Path' },
+  ]);
 
   if (loading) {
     return (
@@ -43,15 +49,8 @@ export function EducationScreen() {
   };
 
   const isLessonLocked = (stageId: number, lessonId: number) => {
-    const stage = stages.find(s => s.id === stageId);
-    if (!stage) return true;
-    
-    // First lesson is always unlocked
-    if (lessonId === 1) return false;
-    
-    // Check if previous lesson is completed
-    const previousLessonCompleted = isLessonCompleted(stageId, lessonId - 1);
-    return !previousLessonCompleted;
+    // All lessons are now unlocked - users can learn freely
+    return false;
   };
 
   const getStageProgress = (stageId: number) => {
@@ -66,13 +65,23 @@ export function EducationScreen() {
   };
 
   const handleLessonPress = (stageId: number, lessonId: number) => {
-    if (!isLessonLocked(stageId, lessonId)) {
-      router.push({
-        pathname: '/lesson-detail',
-        params: { stageId: stageId.toString(), lessonId: lessonId.toString() }
-      });
-    }
+    // All lessons are accessible - no locking restrictions
+    router.push({
+      pathname: '/lesson-detail',
+      params: { stageId: stageId.toString(), lessonId: lessonId.toString() }
+    });
   };
+
+  const renderStagesTab = () => (
+    <StageDeckBrowser 
+      stages={stages}
+      completedLessons={user.completedLessons}
+    />
+  );
+
+  const renderScene = SceneMap({
+    stages: renderStagesTab,
+  });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -88,154 +97,19 @@ export function EducationScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
-        {/* Progress Card */}
-        <View style={styles.progressCard}>
-          <Text style={styles.progressTitle}>Your Progress</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
-          </View>
-          <Text style={styles.progressText}>
-            {completedLessonsCount} of {totalLessons} lessons completed
-          </Text>
-        </View>
-
-        {/* Current Stage */}
-        {currentStage && (
-          <View style={styles.currentStageCard}>
-            <Text style={styles.cardTitle}>Current Stage</Text>
-            <Text style={styles.stageTitle}>{currentStage.title}</Text>
-            <Text style={styles.stageDescription}>{currentStage.description}</Text>
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={() => {
-                // Scroll to current stage lessons
-                const nextLesson = currentStage.lessons.find(lesson => 
-                  !isLessonCompleted(currentStage.id, lesson.id)
-                );
-                if (nextLesson) {
-                  handleLessonPress(currentStage.id, nextLesson.id);
-                }
-              }}
-            >
-              <Text style={styles.continueButtonText}>Continue Learning</Text>
-              <MaterialCommunityIcons name="arrow-right" size={20} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
+      <TabView
+        navigationState={{ index, routes }}
+        renderScene={renderScene}
+        onIndexChange={setIndex}
+        renderTabBar={props => (
+          <TabBar
+            {...props}
+            indicatorStyle={{ backgroundColor: theme.colors.primary }}
+            style={{ backgroundColor: theme.colors.surface }}
+            labelStyle={{ color: theme.colors.onSurface }}
+          />
         )}
-
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons name="fire" size={32} color="#f59e0b" />
-            <Text style={styles.statNumber}>{user.streakDays}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons name="trophy" size={32} color="#8b5cf6" />
-            <Text style={styles.statNumber}>{user.earnedBadges.length}</Text>
-            <Text style={styles.statLabel}>Badges</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons name="school" size={32} color="#10b981" />
-            <Text style={styles.statNumber}>{completedLessonsCount}</Text>
-            <Text style={styles.statLabel}>Lessons</Text>
-          </View>
-        </View>
-
-        {/* Stages and Lessons */}
-        <View style={styles.stagesContainer}>
-          <Text style={styles.sectionTitle}>Learning Stages</Text>
-          
-          {stages.map((stage) => (
-            <View key={stage.id} style={styles.stageContainer}>
-              <View style={styles.stageHeader}>
-                <View style={styles.stageInfo}>
-                  <Text style={styles.stageCardTitle}>{stage.title}</Text>
-                  <Text style={styles.stageCardDescription}>{stage.description}</Text>
-                </View>
-                <View style={styles.progressContainer}>
-                  <Text style={styles.progressText}>
-                    {Math.round(getStageProgress(stage.id))}%
-                  </Text>
-                  <View style={styles.stageProgressBar}>
-                    <View 
-                      style={[
-                        styles.stageProgressFill, 
-                        { width: `${getStageProgress(stage.id)}%` }
-                      ]} 
-                    />
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.lessonsContainer}>
-                {stage.lessons.map((lesson) => {
-                  const completed = isLessonCompleted(stage.id, lesson.id);
-                  const locked = isLessonLocked(stage.id, lesson.id);
-
-                  return (
-                    <TouchableOpacity
-                      key={lesson.id}
-                      style={[
-                        styles.lessonCard,
-                        locked && styles.lessonCardLocked,
-                        completed && styles.lessonCardCompleted,
-                      ]}
-                      onPress={() => handleLessonPress(stage.id, lesson.id)}
-                      disabled={locked}
-                    >
-                      <View style={styles.lessonIcon}>
-                        {completed ? (
-                          <MaterialCommunityIcons name="check-circle" size={32} color="#10b981" />
-                        ) : locked ? (
-                          <MaterialCommunityIcons name="lock" size={32} color="#9ca3af" />
-                        ) : (
-                          <MaterialCommunityIcons name="play-circle" size={32} color="#2563eb" />
-                        )}
-                      </View>
-
-                      <View style={styles.lessonContent}>
-                        <Text style={[
-                          styles.lessonTitle,
-                          locked && styles.lessonTitleLocked
-                        ]}>
-                          {lesson.title}
-                        </Text>
-                        <Text style={[
-                          styles.lessonDescription,
-                          locked && styles.lessonDescriptionLocked
-                        ]}>
-                          {lesson.description}
-                        </Text>
-                        
-                        <View style={styles.lessonMeta}>
-                          <View style={styles.metaItem}>
-                            <MaterialCommunityIcons name="clock-outline" size={16} color="#6b7280" />
-                            <Text style={styles.metaText}>{lesson.duration} min</Text>
-                          </View>
-                          <View style={styles.metaItem}>
-                            <MaterialCommunityIcons name="star" size={16} color="#fbbf24" />
-                            <Text style={styles.metaText}>{lesson.xpReward} XP</Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      <MaterialCommunityIcons 
-                        name="chevron-right" 
-                        size={24} 
-                        color={locked ? "#d1d5db" : "#6b7280"} 
-                      />
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+      />
     </View>
   );
 }

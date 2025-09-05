@@ -406,85 +406,99 @@ export async function getPolygonPopularCrypto(cryptoCount: number = 5): Promise<
     ];
 
     // Shuffle and take requested count
+    // Limit to fewer symbols to avoid rate limiting
+    const maxSymbols = Math.min(cryptoCount, 5);
     const shuffled = [...popularCryptoSymbols].sort(() => 0.5 - Math.random());
-    const selectedSymbols = shuffled.slice(0, cryptoCount);
+    const selectedSymbols = shuffled.slice(0, maxSymbols);
 
     console.log('Fetching popular crypto from Polygon:', selectedSymbols);
 
-    const results = await Promise.all(
-      selectedSymbols.map(async (symbol) => {
-        try {
-          // Get previous close data for each crypto symbol
-          const prevCloseResponse = await axios.get<PolygonPrevCloseResponse>(
-            `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/prev`,
-            {
-              params: {
-                adjusted: true,
-                apikey: POLYGON_API_KEY,
-              },
-            }
-          );
-
-          if (!prevCloseResponse.data.results || prevCloseResponse.data.results.length === 0) {
-            console.warn(`No data for ${symbol}`);
-            return null;
+    // Rate limit the requests to avoid 429 errors
+    const results = [];
+    for (let i = 0; i < selectedSymbols.length; i++) {
+      const symbol = selectedSymbols[i];
+      
+      // Add delay between requests to avoid rate limiting
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+      }
+      
+      try {
+        // Get previous close data for each crypto symbol
+        const prevCloseResponse = await axios.get<PolygonPrevCloseResponse>(
+          `${POLYGON_BASE_URL}/v2/aggs/ticker/${symbol}/prev`,
+          {
+            params: {
+              adjusted: true,
+              apikey: POLYGON_API_KEY,
+            },
           }
+        );
 
-          const prevData = prevCloseResponse.data.results[0];
-          const currentPrice = prevData.c;
-          const previousClose = prevData.o;
-          const changePercentage = previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
-
-          // Generate basic analysis (crypto is more volatile)
-          const sentiment = changePercentage > 0 ? 'positive' : changePercentage < 0 ? 'negative' : 'neutral';
-          const volatility = Math.abs(changePercentage) > 10 ? 'High' : Math.abs(changePercentage) > 5 ? 'Medium' : 'Low';
-          const grade = changePercentage > 10 ? 'A' : changePercentage > 5 ? 'B' : changePercentage > -5 ? 'C' : changePercentage > -10 ? 'D' : 'F';
-          const signal = changePercentage > 5 ? 'Buy' : changePercentage < -5 ? 'Sell' : 'Hold';
-
-          // Get crypto name (simplified mapping)
-          const cryptoNames: { [key: string]: string } = {
-            'X:BTCUSD': 'Bitcoin',
-            'X:ETHUSD': 'Ethereum',
-            'X:ADAUSD': 'Cardano',
-            'X:SOLUSD': 'Solana',
-            'X:MATICUSD': 'Polygon',
-            'X:DOGEUSD': 'Dogecoin',
-            'X:SHIBUSD': 'Shiba Inu',
-            'X:AVAXUSD': 'Avalanche',
-            'X:LINKUSD': 'Chainlink',
-            'X:DOTUSD': 'Polkadot'
-          };
-
-          const displaySymbol = symbol.replace('X:', '').replace('USD', '');
-
-          const result: SearchResult = {
-            id: `polygon-crypto-${displaySymbol}`,
-            symbol: displaySymbol,
-            name: cryptoNames[symbol] || displaySymbol,
-            exchange: 'Polygon',
-            price: currentPrice,
-            changePercentage,
-            previousClose,
-            volume: prevData.v,
-            dayRange: `${prevData.l}-${prevData.h}`,
-            type: 'crypto',
-            timestamp: Date.now(),
-            sentiment,
-            grade: grade as 'A' | 'B' | 'C' | 'D' | 'F',
-            volatility: volatility as 'Low' | 'Medium' | 'High',
-            currentSignal: signal as 'Buy' | 'Sell' | 'Hold',
-            high24h: prevData.h,
-            low24h: prevData.l,
-            marketCap: Math.floor(Math.random() * 100000000000), // Placeholder
-          };
-
-          return result;
-        } catch (error) {
-          console.error(`Error fetching data for ${symbol}:`, error);
-          return null;
+        if (!prevCloseResponse.data.results || prevCloseResponse.data.results.length === 0) {
+          console.warn(`No data for ${symbol}`);
+          results.push(null);
+          continue;
         }
-      })
-    );
+
+        const prevData = prevCloseResponse.data.results[0];
+        const currentPrice = prevData.c;
+        const previousClose = prevData.o;
+        const changePercentage = previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
+
+        // Generate basic analysis (crypto is more volatile)
+        const sentiment = changePercentage > 0 ? 'positive' : changePercentage < 0 ? 'negative' : 'neutral';
+        const volatility = Math.abs(changePercentage) > 10 ? 'High' : Math.abs(changePercentage) > 5 ? 'Medium' : 'Low';
+        const grade = changePercentage > 10 ? 'A' : changePercentage > 5 ? 'B' : changePercentage > -5 ? 'C' : changePercentage > -10 ? 'D' : 'F';
+        const signal = changePercentage > 5 ? 'Buy' : changePercentage < -5 ? 'Sell' : 'Hold';
+
+        // Get crypto name (simplified mapping)
+        const cryptoNames: { [key: string]: string } = {
+          'X:BTCUSD': 'Bitcoin',
+          'X:ETHUSD': 'Ethereum',
+          'X:ADAUSD': 'Cardano',
+          'X:SOLUSD': 'Solana',
+          'X:MATICUSD': 'Polygon',
+          'X:DOGEUSD': 'Dogecoin',
+          'X:SHIBUSD': 'Shiba Inu',
+          'X:AVAXUSD': 'Avalanche',
+          'X:LINKUSD': 'Chainlink',
+          'X:DOTUSD': 'Polkadot'
+        };
+
+        const displaySymbol = symbol.replace('X:', '').replace('USD', '');
+
+        const result: SearchResult = {
+          id: `polygon-crypto-${displaySymbol}`,
+          symbol: displaySymbol,
+          name: cryptoNames[symbol] || displaySymbol,
+          exchange: 'Polygon',
+          price: currentPrice,
+          changePercentage,
+          previousClose,
+          volume: prevData.v,
+          dayRange: `${prevData.l}-${prevData.h}`,
+          type: 'crypto',
+          timestamp: Date.now(),
+          sentiment,
+          grade: grade as 'A' | 'B' | 'C' | 'D' | 'F',
+          volatility: volatility as 'Low' | 'Medium' | 'High',
+          currentSignal: signal as 'Buy' | 'Sell' | 'Hold',
+          high24h: prevData.h,
+          low24h: prevData.l,
+          marketCap: Math.floor(Math.random() * 100000000000), // Placeholder
+        };
+
+        results.push(result);
+      } catch (error: any) {
+        if (error.response?.status === 429) {
+          console.warn(`Rate limited for ${symbol}, skipping...`);
+        } else {
+          console.error(`Error fetching data for ${symbol}:`, error);
+        }
+        results.push(null);
+      }
+    }
 
     const validResults = results.filter((result): result is SearchResult => result !== null);
     console.log('Successfully fetched', validResults.length, 'popular crypto from Polygon');

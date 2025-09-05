@@ -43,15 +43,8 @@ export default function EducationScreen() {
   };
 
   const isLessonLocked = (stageId: number, lessonId: number) => {
-    const stage = stages.find(s => s.id === stageId);
-    if (!stage) return true;
-    
-    // First lesson is always unlocked
-    if (lessonId === 1) return false;
-    
-    // Check if previous lesson is completed
-    const previousLessonCompleted = isLessonCompleted(stageId, lessonId - 1);
-    return !previousLessonCompleted;
+    // All lessons are now unlocked - users can learn freely
+    return false;
   };
 
   const getStageProgress = (stageId: number) => {
@@ -66,12 +59,11 @@ export default function EducationScreen() {
   };
 
   const handleLessonPress = (stageId: number, lessonId: number) => {
-    if (!isLessonLocked(stageId, lessonId)) {
-      router.push({
-        pathname: '/lesson-detail',
-        params: { stageId: stageId.toString(), lessonId: lessonId.toString() }
-      });
-    }
+    // All lessons are accessible - no locking restrictions
+    router.push({
+      pathname: '/lesson-detail',
+      params: { stageId: stageId.toString(), lessonId: lessonId.toString() }
+    });
   };
 
   return (
@@ -174,40 +166,29 @@ export default function EducationScreen() {
               <View style={styles.lessonsContainer}>
                 {stage.lessons.map((lesson) => {
                   const completed = isLessonCompleted(stage.id, lesson.id);
-                  const locked = isLessonLocked(stage.id, lesson.id);
 
                   return (
                     <TouchableOpacity
                       key={lesson.id}
                       style={[
                         styles.lessonCard,
-                        locked && styles.lessonCardLocked,
                         completed && styles.lessonCardCompleted,
                       ]}
                       onPress={() => handleLessonPress(stage.id, lesson.id)}
-                      disabled={locked}
                     >
                       <View style={styles.lessonIcon}>
                         {completed ? (
                           <MaterialCommunityIcons name="check-circle" size={32} color="#10b981" />
-                        ) : locked ? (
-                          <MaterialCommunityIcons name="lock" size={32} color="#9ca3af" />
                         ) : (
                           <MaterialCommunityIcons name="play-circle" size={32} color="#2563eb" />
                         )}
                       </View>
 
                       <View style={styles.lessonContent}>
-                        <Text style={[
-                          styles.lessonTitle,
-                          locked && styles.lessonTitleLocked
-                        ]}>
+                        <Text style={styles.lessonTitle}>
                           {lesson.title}
                         </Text>
-                        <Text style={[
-                          styles.lessonDescription,
-                          locked && styles.lessonDescriptionLocked
-                        ]}>
+                        <Text style={styles.lessonDescription}>
                           {lesson.description}
                         </Text>
                         
@@ -481,10 +462,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  lessonCardLocked: {
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
-  },
   lessonCardCompleted: {
     backgroundColor: '#f0fdf4',
     borderColor: '#bbf7d0',
@@ -502,18 +479,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'Graphik-Semibold',
   },
-  lessonTitleLocked: {
-    color: '#9ca3af',
-  },
   lessonDescription: {
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 8,
     lineHeight: 20,
     fontFamily: 'Graphik-Regular',
-  },
-  lessonDescriptionLocked: {
-    color: '#d1d5db',
   },
   lessonMeta: {
     flexDirection: 'row',

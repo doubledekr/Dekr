@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEducation } from '../contexts/EducationContext';
 import { LessonContent, AudioBlock, TextBlock, TapToRevealCard, MultipleChoiceQuestion } from '../types/education';
-import WebAudioPlayer from '../components/WebAudioPlayer';
+import ReactNativeAudioPlayer from '../components/ReactNativeAudioPlayer';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +29,10 @@ export default function LessonDetailScreen() {
 
   const stage = stages.find(s => s.id === parseInt(stageId || '1'));
   const lesson = stage?.lessons.find(l => l.id === parseInt(lessonId || '1'));
+
+  console.log('📚 Lesson Detail Screen - Stage ID:', stageId, 'Lesson ID:', lessonId);
+  console.log('📚 Found stage:', stage?.title);
+  console.log('📚 Found lesson:', lesson?.title);
 
 
 
@@ -89,12 +93,15 @@ export default function LessonDetailScreen() {
   };
 
   const renderContent = (content: LessonContent, index: number) => {
+    console.log('📚 Rendering content:', content.type, 'at index:', index);
+    
     switch (content.type) {
       case 'audio':
         const audioContent = content as AudioBlock;
+        console.log('🎵 Rendering audio content:', audioContent);
         return (
           <View key={index} style={styles.contentBlock}>
-            <WebAudioPlayer
+            <ReactNativeAudioPlayer
               audioUrl={audioContent.audioUrl}
               title={audioContent.audioTitle || 'Audio Content'}
               transcript={audioContent.transcript}
@@ -242,6 +249,7 @@ export default function LessonDetailScreen() {
             )}
           </View>
         </View>
+
 
         {/* Lesson Content */}
         {lesson.content.map((content, index) => renderContent(content, index))}

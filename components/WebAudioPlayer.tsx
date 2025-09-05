@@ -54,7 +54,7 @@ export default function WebAudioPlayer({ audioUrl, title, transcript }: WebAudio
       audio.removeEventListener('error', handleError);
       audio.pause();
     };
-  }, []);
+  }, [audioUrl]);
 
   const togglePlayPause = async () => {
     if (!audioRef.current) return;

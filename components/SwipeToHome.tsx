@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { router } from 'expo-router';
@@ -10,6 +10,8 @@ interface SwipeToHomeProps {
 }
 
 export function SwipeToHome({ children, swipeThreshold = 100 }: SwipeToHomeProps) {
+  const panRef = useRef<PanGestureHandler>(null);
+
   const handleGestureEvent = (event: any) => {
     const { translationX, translationY, state } = event.nativeEvent;
     
@@ -24,7 +26,10 @@ export function SwipeToHome({ children, swipeThreshold = 100 }: SwipeToHomeProps
   };
 
   return (
-    <PanGestureHandler onHandlerStateChange={handleGestureEvent}>
+    <PanGestureHandler 
+      ref={panRef}
+      onHandlerStateChange={handleGestureEvent}
+    >
       <View style={styles.container}>
         {children}
         {/* Swipe indicator */}

@@ -72,15 +72,20 @@ export async function logEvent(
   params?: Record<string, any>
 ) {
   try {
-    const baseParams: BaseEventParams = {
-      timestamp: Date.now(),
-      platform: Platform.OS,
-    };
+    // Check if Firebase is properly initialized
+    if (typeof analytics === 'function' && analytics()) {
+      const baseParams: BaseEventParams = {
+        timestamp: Date.now(),
+        platform: Platform.OS,
+      };
 
-    await analytics().logEvent(eventName, {
-      ...baseParams,
-      ...params,
-    });
+      await analytics().logEvent(eventName, {
+        ...baseParams,
+        ...params,
+      });
+    } else {
+      console.log('📊 Analytics not available (using dummy mode)');
+    }
   } catch (error) {
     console.error('Error logging analytics event:', error);
   }
@@ -88,9 +93,14 @@ export async function logEvent(
 
 export async function setUserProperties(properties: Record<string, string>) {
   try {
-    const entries = Object.entries(properties);
-    for (const [key, value] of entries) {
-      await analytics().setUserProperty(key, value);
+    // Check if Firebase is properly initialized
+    if (typeof analytics === 'function' && analytics()) {
+      const entries = Object.entries(properties);
+      for (const [key, value] of entries) {
+        await analytics().setUserProperty(key, value);
+      }
+    } else {
+      console.log('📊 Analytics not available (using dummy mode)');
     }
   } catch (error) {
     console.error('Error setting user properties:', error);
@@ -99,10 +109,15 @@ export async function setUserProperties(properties: Record<string, string>) {
 
 export async function logScreenView(screenName: string, screenClass?: string) {
   try {
-    await analytics().logScreenView({
-      screen_name: screenName,
-      screen_class: screenClass || screenName,
-    });
+    // Check if Firebase is properly initialized
+    if (typeof analytics === 'function' && analytics()) {
+      await analytics().logScreenView({
+        screen_name: screenName,
+        screen_class: screenClass || screenName,
+      });
+    } else {
+      console.log('📊 Analytics not available (using dummy mode)');
+    }
   } catch (error) {
     console.error('Error logging screen view:', error);
   }

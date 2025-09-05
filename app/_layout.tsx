@@ -62,21 +62,26 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
-        name="modal"
-        options={{
-          presentation: 'modal',
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="onboarding"
+        name="onboarding/index"
         options={{
           headerShown: false,
           gestureEnabled: false,
         }}
       />
       <Stack.Screen
-        name="auth"
+        name="auth/sign-in"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="auth/sign-up"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="auth/forgot-password"
         options={{
           headerShown: false,
         }}
@@ -126,7 +131,7 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
-        name="UserProfile"
+        name="profile"
         options={{
           headerShown: true,
           title: 'User Profile',
@@ -160,6 +165,37 @@ function RootLayoutNav() {
         options={{
           headerShown: true,
           title: 'Challenge Details',
+        }}
+      />
+      <Stack.Screen
+        name="lesson-detail"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="CommunityLearningDeckScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="StageDeckScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="webview"
+        options={{
+          headerShown: true,
+          title: 'Web View',
+        }}
+      />
+      <Stack.Screen
+        name="loading"
+        options={{
+          headerShown: false,
         }}
       />
     </Stack>

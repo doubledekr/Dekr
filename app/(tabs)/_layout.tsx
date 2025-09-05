@@ -44,7 +44,7 @@ export default function TabLayout() {
         options={{
           title: 'Build',
           tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? "hammer-wrench" : "hammer-wrench-outline"} size={size} color={color} />
+            <MaterialCommunityIcons name={focused ? "hammer-wrench" : "wrench-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -104,12 +104,6 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="education"
-        options={{
-          href: null, // Hide from tab bar
-        }}
-      />
-      <Tabs.Screen
-        name="course-generator"
         options={{
           href: null, // Hide from tab bar
         }}

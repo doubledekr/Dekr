@@ -4,13 +4,11 @@ import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { useTheme } from 'react-native-paper';
 import { EducationScreen } from '../../src/screens/Education/EducationScreen';
 import { CommunityLearningScreen } from '../../src/screens/Learn/CommunityLearningScreen';
-import { CompetitionPrepScreen } from '../../src/screens/Learn/CompetitionPrepScreen';
 import { SwipeToHome } from '../../components/SwipeToHome';
 
 const renderScene = SceneMap({
   courses: EducationScreen,
   community: CommunityLearningScreen,
-  prep: CompetitionPrepScreen,
 });
 
 export default function LearnTab() {
@@ -19,7 +17,6 @@ export default function LearnTab() {
   const [routes] = useState([
     { key: 'courses', title: 'Courses' },
     { key: 'community', title: 'Community' },
-    { key: 'prep', title: 'Competition Prep' },
   ]);
 
   return (

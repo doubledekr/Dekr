@@ -16,6 +16,7 @@ import { Challenge } from '../../types/firestore';
 import { ThemedView } from '../../../components/ThemedView';
 import { ThemedText } from '../../../components/ThemedText';
 import { useThemeColor } from '../../../hooks/useThemeColor';
+import { router } from 'expo-router';
 
 type TabType = 'active' | 'joined' | 'completed' | 'leaderboard';
 
@@ -187,8 +188,12 @@ export const ChallengesListScreen: React.FC = () => {
   }, [navigation]);
 
   const handleChallengePress = useCallback((challenge: Challenge) => {
-    navigation.navigate('ChallengeDetail', { challengeId: challenge.id });
-  }, [navigation]);
+    // Navigate to the new challenge deck screen
+    router.push({
+      pathname: '/ChallengeDeckScreen',
+      params: { challengeId: challenge.id }
+    });
+  }, []);
 
   const renderTabButton = (tab: TabType, label: string, icon: string, count?: number) => (
     <TouchableOpacity

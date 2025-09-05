@@ -4,7 +4,6 @@ import { useTheme, SegmentedButtons } from 'react-native-paper';
 import { ChallengesListScreen } from '../../src/screens/Challenges/ChallengesListScreenSimple';
 import { FriendsScreen } from '../../src/screens/Social/FriendsScreen';
 import { LeaderboardsScreen } from '../../src/screens/Play/LeaderboardsScreen';
-// import { WeeklyCompetitionsScreen } from '../../src/screens/Play/WeeklyCompetitionsScreen';
 import { SwipeToHome } from '../../components/SwipeToHome';
 
 export default function PlayTab() {
@@ -19,12 +18,6 @@ export default function PlayTab() {
         return <FriendsScreen />;
       case 'leaderboards':
         return <LeaderboardsScreen />;
-      case 'competitions':
-        return (
-          <View style={{ padding: 16 }}>
-            <Text>Weekly Competitions - Coming Soon</Text>
-          </View>
-        );
       default:
         return <ChallengesListScreen />;
     }
@@ -43,7 +36,6 @@ export default function PlayTab() {
             { value: 'challenges', label: 'Challenges' },
             { value: 'social', label: 'Social' },
             { value: 'leaderboards', label: 'Leaderboards' },
-            { value: 'competitions', label: 'Weekly' },
           ]}
           style={styles.segmentedButtons}
         />

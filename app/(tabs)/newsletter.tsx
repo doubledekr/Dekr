@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import WebAudioPlayer from '../../components/WebAudioPlayer';
+import ReactNativeAudioPlayer from '../../components/ReactNativeAudioPlayer';
 import {
   Text,
   Card,
@@ -302,10 +302,9 @@ export default function NewsletterScreen() {
                   This is a locked demo podcast showcasing our audio features
                 </Paragraph>
               )}
-              <WebAudioPlayer
+              <ReactNativeAudioPlayer
                 audioUrl={currentPodcastUrl}
                 title="Weekly Market Update"
-                style={styles.audioPlayer}
               />
             </Card.Content>
           </Card>
