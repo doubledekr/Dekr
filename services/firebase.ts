@@ -13,15 +13,15 @@ if (Platform.OS === 'web') {
   const { getFirestore, connectFirestoreEmulator } = require('firebase/firestore');
   const { initializeApp, getApps, getApp } = require('firebase/app');
   
-  // Firebase configuration
+  // Firebase configuration for dekr-nextgen project
   const firebaseConfig = {
-    apiKey: "AIzaSyBsOes01Lnp2leFMN_qJbk-_X6nZIlHvBU",
-    authDomain: "alpha-orbit.firebaseapp.com",
-    projectId: "alpha-orbit",
-    storageBucket: "alpha-orbit.appspot.com",
-    messagingSenderId: "152969284019",
-    appId: "1:152969284019:web:8c2a1d6a7d6a48c52623c6",
-    measurementId: "G-4TB90WRQ97"
+    apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    authDomain: "dekr-nextgen.firebaseapp.com",
+    projectId: "dekr-nextgen",
+    storageBucket: "dekr-nextgen.appspot.com",
+    messagingSenderId: "123456789012",
+    appId: "1:123456789012:web:abcdef1234567890abcdef",
+    measurementId: "G-XXXXXXXXXX"
   };
 
   // Initialize Firebase
@@ -140,17 +140,17 @@ if (Platform.OS === 'web') {
 // IMPORTANT FOR iOS: 
 // 1. Make sure the REVERSED_CLIENT_ID from GoogleService-Info.plist is added as a URL scheme in Info.plist
 // 2. Enable "Sign in with Apple" capability in Xcode
-// 3. Ensure GoogleService-Info.plist has the correct bundle ID (io.dekr.app)
+// 3. Ensure GoogleService-Info.plist has the correct bundle ID (com.dekr.app)
 
 // Configure Google Sign-In with the appropriate client IDs (only for native platforms)
 if (Platform.OS !== 'web') {
   GoogleSignin.configure({
     // The webClientId is your Firebase Web Client ID (used for Android and iOS)
-    // This should match the one in your Firebase console
-    webClientId: '152969284019-p42jnunll1hg2dqdcpqnacvvkjf9b9vs.apps.googleusercontent.com',
+    // This should match the one in your Firebase console for dekr-nextgen
+    webClientId: '123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com',
     
     // iOS-specific client ID from GoogleService-Info.plist (CLIENT_ID value)
-    iosClientId: Platform.OS === 'ios' ? '152969284019-s54gbe5rn0qjoqqjp0h84e3bmt8jat44.apps.googleusercontent.com' : undefined,
+    iosClientId: Platform.OS === 'ios' ? '123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com' : undefined,
     
     // Required for offline access
     offlineAccess: true,
@@ -178,7 +178,7 @@ export const checkIOSGoogleSignInConfig = async (): Promise<void> => {
     console.log('📱 iOS Google Sign-In Configuration Check:');
     
     // 1. Check if iosClientId is configured
-    const iosClientId = '152969284019-s54gbe5rn0qjoqqjp0h84e3bmt8jat44.apps.googleusercontent.com';
+    const iosClientId = '123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com';
     console.log(`✅ iOS Client ID: ${iosClientId}`);
     
     // 2. Check hasPlayServices (should work on iOS too)
@@ -553,14 +553,21 @@ async function createUserProfileIfNeeded(user: any): Promise<void> {
       const userDoc = await getDoc(userRef);
       
       if (!userDoc.exists()) {
-        // Create new user profile
+        // Create new user profile with new schema
         const userData = {
           uid: user.uid,
           email: user.email,
           displayName: user.displayName || '',
-          photoURL: user.photoURL || '',
-          createdAt: serverTimestamp(),
-          watchlist: [],
+          avatarUrl: user.photoURL || '',
+          joinDate: serverTimestamp(),
+          isPublic: false,
+          currentStage: 1,
+          xp: 0,
+          stats: {
+            weeklyGainPercent: 0,
+            competitionsWon: 0,
+            lessonsCompleted: 0
+          },
           settings: {
             pushNotifications: true,
             emailNotifications: true,
@@ -577,14 +584,21 @@ async function createUserProfileIfNeeded(user: any): Promise<void> {
       const userDoc = await userRef.get();
       
       if (!userDoc.exists) {
-        // Create new user profile
+        // Create new user profile with new schema
         const userData = {
           uid: user.uid,
           email: user.email,
           displayName: user.displayName || '',
-          photoURL: user.photoURL || '',
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          watchlist: [],
+          avatarUrl: user.photoURL || '',
+          joinDate: firestore.FieldValue.serverTimestamp(),
+          isPublic: false,
+          currentStage: 1,
+          xp: 0,
+          stats: {
+            weeklyGainPercent: 0,
+            competitionsWon: 0,
+            lessonsCompleted: 0
+          },
           settings: {
             pushNotifications: true,
             emailNotifications: true,

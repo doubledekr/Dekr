@@ -1,6 +1,6 @@
 import { logEvent, AnalyticsEvents } from './analytics';
-import { firestore } from './firebase-platform';
-import firestoreNS, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import { firestore } from './firebase';
+import { Platform } from 'react-native';
 
 export interface UserAnalytics {
   userId: string;

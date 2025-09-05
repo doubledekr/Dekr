@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { firestore } from './firebase';
 import { Platform } from 'react-native';
 import { logEvent, AnalyticsEvents } from './analytics';
+import { storageService } from './StorageService';
 
 export interface Newsletter {
   id: string;

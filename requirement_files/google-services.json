@@ -1,94 +1,34 @@
 {
   "project_info": {
-    "project_number": "152969284019",
-    "firebase_url": "https://alpha-orbit-default-rtdb.firebaseio.com",
-    "project_id": "alpha-orbit",
-    "storage_bucket": "alpha-orbit.appspot.com"
+    "project_number": "123456789012",
+    "project_id": "dekr-nextgen",
+    "storage_bucket": "dekr-nextgen.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:152969284019:android:e1cc991e365531c72623c6",
+        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890abcdef",
         "android_client_info": {
-          "package_name": "com.pittsdev.dekr"
+          "package_name": "com.dekr.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "152969284019-ieu0ht1bf88gdj4hi79bllqi1d8qq6ae.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.pittsdev.dekr",
-            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
-          }
-        },
-        {
-          "client_id": "152969284019-p42jnunll1hg2dqdcpqnacvvkjf9b9vs.apps.googleusercontent.com",
+          "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBsnuy4afD4nmLVWOc6Kg907FL4p3pbaO4"
+          "current_key": "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "152969284019-p42jnunll1hg2dqdcpqnacvvkjf9b9vs.apps.googleusercontent.com",
+              "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "152969284019-05htoprgv3rhne3s2qhqdv9ep6hn91a0.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.dekr.app"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:152969284019:android:a4938bff7495e80e2623c6",
-        "android_client_info": {
-          "package_name": "io.dekr.app"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "152969284019-ei2hlpq0o5uugsgeoifcoetbsfo02st6.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "io.dekr.app",
-            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
-          }
-        },
-        {
-          "client_id": "152969284019-p42jnunll1hg2dqdcpqnacvvkjf9b9vs.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBsnuy4afD4nmLVWOc6Kg907FL4p3pbaO4"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "152969284019-p42jnunll1hg2dqdcpqnacvvkjf9b9vs.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "152969284019-05htoprgv3rhne3s2qhqdv9ep6hn91a0.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.dekr.app"
-              }
             }
           ]
         }

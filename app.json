@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "buildNumber": "5",
-      "bundleIdentifier": "com.pittsdev.dekr",
+      "bundleIdentifier": "com.dekr.app",
       "googleServicesFile": "./requirement_files/GoogleService-Info.plist",
       "icon": "./assets/images/icon.png",
       "backgroundColor": "#6CA393"
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#6CA393"
       },
-      "package": "com.pittsdev.dekr",
+      "package": "com.dekr.app",
       "googleServicesFile": "./requirement_files/google-services.json"
     },
     "plugins": [
@@ -45,7 +45,7 @@
         }
       ]
     ],
-    "scheme": "com.pittsdev.dekr",
+    "scheme": "com.dekr.app",
     "experiments": {
       "typedRoutes": true
     },
