@@ -19,16 +19,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LayoutProvider } from '../contexts/LayoutContext';
 import { EducationProvider } from '../contexts/EducationContext';
 
-const theme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: '#536B31',
-    secondary: '#7B904B',
-    tertiary: '#A4B07E',
-  },
-};
-
 function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();

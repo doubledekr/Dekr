@@ -1,16 +1,16 @@
 {
   "project_info": {
     "project_number": "152969284019",
-    "firebase_url": "https://alpha-orbit-default-rtdb.firebaseio.com",
-    "project_id": "alpha-orbit",
-    "storage_bucket": "alpha-orbit.appspot.com"
+    "firebase_url": "https://dekr-nextgen-default-rtdb.firebaseio.com",
+    "project_id": "dekr-nextgen",
+    "storage_bucket": "dekr-nextgen.appspot.com"
   },
   "client": [
     {
       "client_info": {
         "mobilesdk_app_id": "1:152969284019:android:e1cc991e365531c72623c6",
         "android_client_info": {
-          "package_name": "com.pittsdev.dekr"
+          "package_name": "com.dekr.app"
         }
       },
       "oauth_client": [
@@ -18,7 +18,7 @@
           "client_id": "152969284019-ieu0ht1bf88gdj4hi79bllqi1d8qq6ae.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.pittsdev.dekr",
+            "package_name": "com.dekr.app",
             "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
           }
         },

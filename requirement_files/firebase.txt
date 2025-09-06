@@ -1,7 +1,7 @@
 apiKey: "AIzaSyBsOes01Lnp2leFMN_qJbk-_X6nZIlHvBU",
-authDomain: "alpha-orbit.firebaseapp.com",
-projectId: "alpha-orbit",
-storageBucket: "alpha-orbit.appspot.com",
+authDomain: "dekr-nextgen.firebaseapp.com",
+projectId: "dekr-nextgen",
+storageBucket: "dekr-nextgen.appspot.com",
 messagingSenderId: "152969284019",
 appId: "1:152969284019:web:8c2a1d6a7d6a48c52623c6",
 measurementId: "G-4TB90WRQ97"

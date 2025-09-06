@@ -98,7 +98,7 @@ async function debugAudioPlayback() {
         
         // Test 3: Check Firebase Storage rules
         console.log('🔒 Step 3: Checking Firebase Storage rules...');
-        const storageUrl = 'https://firebasestorage.googleapis.com/v0/b/alpha-orbit.appspot.com/o/weekly-podcasts%2F';
+        const storageUrl = 'https://firebasestorage.googleapis.com/v0/b/dekr-nextgen.appspot.com/o/weekly-podcasts%2F';
         console.log(`📁 Storage base URL: ${storageUrl}`);
         console.log('📋 Storage rules should allow public read access for /weekly-podcasts/{allPaths=**}');
         console.log('');

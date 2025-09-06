@@ -33,7 +33,7 @@ admin.initializeApp();
 __exportStar(require("./strategies"), exports);
 __exportStar(require("./challenges"), exports);
 __exportStar(require("./social"), exports);
-__exportStar(require("./migrations/uploadLessonAudio"), exports);
+// export * from './migrations/uploadLessonAudio'; // Migration script - not for cloud deployment
 __exportStar(require("./content/cardGenerator"), exports);
 // export * from './content/weeklyPodcastGenerator'; // Temporarily disabled due to TypeScript errors
 //# sourceMappingURL=index.js.map

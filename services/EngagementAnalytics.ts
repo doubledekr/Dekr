@@ -851,7 +851,7 @@ export class EngagementAnalytics {
     };
   }
 
-  private calculateCompletionRates(interactions: UserInteraction()) {
+  private calculateCompletionRates(interactions: UserInteraction[]) {
     const completableInteractions = interactions.filter(i => 
       i.cardType === 'lesson' || i.cardType === 'podcast'
     );
@@ -883,7 +883,7 @@ export class EngagementAnalytics {
     };
   }
 
-  private calculateEngagementTrends(interactions: UserInteraction[], sessions: SessionData()) {
+  private calculateEngagementTrends(interactions: UserInteraction[], sessions: SessionData[]) {
     const uniqueUsers = new Set(interactions.map(i => i.sessionId));
     
     return {

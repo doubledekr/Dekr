@@ -31,7 +31,7 @@ export default function LearnTab() {
               {...props}
               indicatorStyle={{ backgroundColor: theme.colors.primary }}
               style={{ backgroundColor: theme.colors.surface }}
-              labelStyle={{ color: theme.colors.onSurface }}
+              tabStyle={{ backgroundColor: theme.colors.surface }}
             />
           )}
         />

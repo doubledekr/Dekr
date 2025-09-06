@@ -117,7 +117,7 @@ export default function NewsletterScreen() {
       }
     } catch (error) {
       console.error('Error generating podcast newsletter:', error);
-      Alert.alert('Error', `Failed to generate podcast newsletter: ${error.message || error}`);
+      Alert.alert('Error', `Failed to generate podcast newsletter: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsGeneratingPodcast(false);
     }

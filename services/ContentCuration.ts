@@ -239,7 +239,7 @@ export class ContentCurationService {
       const newFavorites = segmentFavorites.filter(fav => !userCardIds.has(fav.cardId));
       
       // Add community context
-      const favoritesWithContext = newFavorites.map(fav => ({
+      const favoritesWithContext = await Promise.all(newFavorites.map(async fav => ({
         cardId: fav.cardId,
         score: fav.score,
         reason: fav.reason,
@@ -248,7 +248,7 @@ export class ContentCurationService {
           popularity: fav.score,
           successRate: await this.getContentSuccessRate(fav.cardId, userSegment)
         }
-      }));
+      })));
       
       return favoritesWithContext.slice(0, limit);
     } catch (error) {
