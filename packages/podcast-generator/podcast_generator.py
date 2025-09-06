@@ -60,7 +60,7 @@ class PodcastGenerator:
             if os.path.exists('firebase-service-account.json'):
                 cred = credentials.Certificate('firebase-service-account.json')
                 firebase_admin.initialize_app(cred, {
-                    'storageBucket': 'alpha-orbit.appspot.com'
+                    'storageBucket': 'dekr-nextgen.appspot.com'
                 })
             else:
                 # Use default credentials (for local development)

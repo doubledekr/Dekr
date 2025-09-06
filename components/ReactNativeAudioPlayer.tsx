@@ -2,27 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Audio } from 'expo-av';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { getAudioAsset } from '../utils/audioAssets';
+import { getAudioAsset, audioAssetManager } from '../utils/audioAssets';
 
 interface ReactNativeAudioPlayerProps {
   audioUrl: string;
   title: string;
   transcript?: string;
+  stage?: number;
+  lessonId?: number;
 }
 
-export default function ReactNativeAudioPlayer({ audioUrl, title, transcript }: ReactNativeAudioPlayerProps) {
+export default function ReactNativeAudioPlayer({ audioUrl, title, transcript, stage, lessonId }: ReactNativeAudioPlayerProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [audioSource, setAudioSource] = useState<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [maxRetries] = useState(3);
 
   // Reduced logging for cleaner console output
   console.log('🎵 ReactNativeAudioPlayer:', title, '- URL:', audioUrl);
 
   useEffect(() => {
-    loadAudio();
+    loadAudioSource();
     
     return () => {
       // Cleanup function
@@ -33,7 +38,7 @@ export default function ReactNativeAudioPlayer({ audioUrl, title, transcript }: 
         });
       }
     };
-  }, [audioUrl]);
+  }, [audioUrl, stage, lessonId]);
 
   // Cleanup on component unmount
   useEffect(() => {
@@ -81,9 +86,60 @@ export default function ReactNativeAudioPlayer({ audioUrl, title, transcript }: 
     }
   };
 
-  const loadAudio = async () => {
+  const loadAudioSource = async () => {
     try {
       setIsLoading(true);
+      setRetryCount(0);
+
+      // Try to get audio source from Firebase Storage first if stage and lessonId are provided
+      if (stage && lessonId) {
+        console.log(`🔄 Loading audio from Firebase Storage for lesson ${stage}_${lessonId}`);
+        try {
+          const firebaseSource = await audioAssetManager.getLessonAudioAsset(stage, lessonId);
+          setAudioSource(firebaseSource);
+          console.log('✅ Firebase Storage audio source loaded');
+        } catch (firebaseError) {
+          console.warn('⚠️ Firebase Storage failed, falling back to local assets:', firebaseError);
+          // Fall through to local asset loading
+        }
+      }
+
+      // If no Firebase source or Firebase failed, try local assets
+      if (!audioSource) {
+        console.log('🔄 Loading audio from local assets');
+        const localSource = getAudioAsset(audioUrl);
+        
+        if (!localSource) {
+          throw new Error('No audio source available - neither Firebase Storage nor local assets found');
+        }
+        
+        setAudioSource(localSource);
+        console.log('✅ Local audio source loaded');
+      }
+
+      // Load the audio with the determined source
+      await loadAudio();
+      
+    } catch (error) {
+      console.error('❌ ReactNativeAudioPlayer: Error loading audio source:', error);
+      setIsLoading(false);
+      
+      // Retry logic
+      if (retryCount < maxRetries) {
+        console.log(`🔄 Retrying audio load (${retryCount + 1}/${maxRetries})`);
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => {
+          loadAudioSource();
+        }, 1000 * (retryCount + 1)); // Exponential backoff
+      }
+    }
+  };
+
+  const loadAudio = async () => {
+    try {
+      if (!audioSource) {
+        throw new Error('No audio source available');
+      }
 
       // Request permissions first
       const hasPermissions = await requestAudioPermission();
@@ -101,14 +157,6 @@ export default function ReactNativeAudioPlayer({ audioUrl, title, transcript }: 
           console.error('❌ ReactNativeAudioPlayer: Error unloading previous sound:', unloadError);
         }
       }
-
-      // Get the proper audio asset
-      const audioSource = getAudioAsset(audioUrl);
-      
-      if (!audioSource) {
-        console.error('❌ ReactNativeAudioPlayer: Audio source is null or undefined');
-        throw new Error('Audio source is null or undefined - check audio asset mapping');
-      }
       
       // Create a new sound object
       const createOptions = { shouldPlay: false };
@@ -121,9 +169,11 @@ export default function ReactNativeAudioPlayer({ audioUrl, title, transcript }: 
       
       setSound(newSound);
       setIsLoading(false);
+      console.log('✅ Audio loaded successfully');
     } catch (error) {
       console.error('❌ ReactNativeAudioPlayer: Error loading audio:', error);
       setIsLoading(false);
+      throw error;
     }
   };
 
@@ -155,6 +205,13 @@ export default function ReactNativeAudioPlayer({ audioUrl, title, transcript }: 
       }
     } catch (error) {
       console.error('❌ ReactNativeAudioPlayer: Error toggling playback:', error.message);
+      
+      // If playback fails and we have retries left, try to reload the audio
+      if (retryCount < maxRetries) {
+        console.log('🔄 Playback failed, attempting to reload audio...');
+        setRetryCount(prev => prev + 1);
+        await loadAudioSource();
+      }
     }
   };
 

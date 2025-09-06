@@ -13,33 +13,37 @@ service firebase.storage {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    function isAuthorizedUser() {
+      return isAuthenticated() || request.auth.uid == 'demo-user-123';
+    }
+    
     // Main content folder with organized structure
     match /dekr-content/{allPaths=**} {
       
       // Audio folder - organized by content type
       match /audio/{allPaths=**} {
         
-        // Lessons audio - public read access for all authenticated users
+        // Lessons audio - public read access for all authenticated users and demo user
         match /lessons/{allPaths=**} {
-          allow read: if isAuthenticated();
+          allow read: if isAuthorizedUser();
           allow write: if false; // Only Cloud Functions can upload lessons
         }
         
         // Community audio - public read access
         match /community/{allPaths=**} {
-          allow read: if isAuthenticated();
+          allow read: if isAuthorizedUser();
           allow write: if isAuthenticated(); // Authenticated users can upload community content
         }
         
         // Podcasts audio - public read access
         match /podcasts/{allPaths=**} {
-          allow read: if isAuthenticated();
+          allow read: if isAuthorizedUser();
           allow write: if false; // Only Cloud Functions can upload podcasts
         }
         
         // Intro stingers - public read access
         match /intro_stingers/{allPaths=**} {
-          allow read: if isAuthenticated();
+          allow read: if isAuthorizedUser();
           allow write: if false; // Only admin/Cloud Functions
         }
       }
@@ -54,13 +58,13 @@ service firebase.storage {
         
         // Transcripts - public read access for lessons
         match /transcripts/{allPaths=**} {
-          allow read: if isAuthenticated();
+          allow read: if isAuthorizedUser();
           allow write: if false; // Only Cloud Functions
         }
         
         // Scripts - public read access for podcasts
         match /scripts/{allPaths=**} {
-          allow read: if isAuthenticated();
+          allow read: if isAuthorizedUser();
           allow write: if false; // Only Cloud Functions
         }
       }
@@ -70,7 +74,7 @@ service firebase.storage {
         
         // Lesson thumbnails - public read access
         match /lesson_thumbnails/{allPaths=**} {
-          allow read: if isAuthenticated();
+          allow read: if isAuthorizedUser();
           allow write: if false; // Only Cloud Functions
         }
         
@@ -85,7 +89,7 @@ service firebase.storage {
         
         // Deck covers - public read access
         match /deck_covers/{allPaths=**} {
-          allow read: if isAuthenticated();
+          allow read: if isAuthorizedUser();
           allow write: if isAuthenticated(); // Deck owners can upload covers
         }
       }
@@ -100,12 +104,12 @@ service firebase.storage {
     }
     
     match /audio/{allPaths=**} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthorizedUser();
       allow write: if false; // No write access (managed by admin)
     }
     
     match /weekly-podcasts/{allPaths=**} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthorizedUser();
       allow write: if isAuthenticated();
     }
     

@@ -7,3 +7,4 @@ admin.initializeApp();
 export * from './strategies';
 export * from './challenges';
 export * from './social';
+export * from './migrations/uploadLessonAudio';

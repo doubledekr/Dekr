@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { LessonCard as LessonCardType, Resource, Quiz } from '../../types/deck';
 import ReactNativeAudioPlayer from '../ReactNativeAudioPlayer';
+import { audioAssetManager } from '../../utils/audioAssets';
+import LessonMetadataService from '../../services/LessonMetadataService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.9;
@@ -46,10 +48,59 @@ export const LessonCard: React.FC<LessonCardProps> = ({
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [audioUrl, setAudioUrl] = useState(card.audioUrl);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const lessonMetadataService = LessonMetadataService.getInstance();
   
   const translateX = useRef(new Animated.Value(0)).current;
   const rotate = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
+
+  // Load audio URL from Firebase Storage when component mounts
+  useEffect(() => {
+    loadAudioUrl();
+  }, [card.id, card.stage]);
+
+  const loadAudioUrl = async () => {
+    if (!card.audioUrl) return;
+
+    setIsLoadingAudio(true);
+    setAudioError(null);
+
+    try {
+      // Try to get Firebase Storage URL if we have stage and lesson info
+      if (card.stage && card.courseId) {
+        console.log(`🔄 Loading Firebase Storage URL for lesson ${card.courseId}_${card.stage}`);
+        
+        try {
+          const firebaseUrl = await audioAssetManager.getLessonAudioAsset(
+            parseInt(card.courseId), 
+            card.stage
+          );
+          
+          if (firebaseUrl && firebaseUrl.uri) {
+            setAudioUrl(firebaseUrl.uri);
+            console.log('✅ Firebase Storage URL loaded successfully');
+            return;
+          }
+        } catch (firebaseError) {
+          console.warn('⚠️ Firebase Storage failed, using fallback URL:', firebaseError);
+        }
+      }
+
+      // Fallback to original audioUrl
+      setAudioUrl(card.audioUrl);
+      console.log('✅ Using fallback audio URL');
+      
+    } catch (error) {
+      console.error('❌ Error loading audio URL:', error);
+      setAudioError('Failed to load audio');
+      setAudioUrl(card.audioUrl); // Fallback to original
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -247,10 +298,34 @@ export const LessonCard: React.FC<LessonCardProps> = ({
           <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
             Audio Lesson
           </Text>
-          <ReactNativeAudioPlayer 
-            audioUrl={card.audioUrl}
-            title={card.title}
-          />
+          
+          {isLoadingAudio ? (
+            <View style={styles.loadingContainer}>
+              <MaterialCommunityIcons name="loading" size={24} color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.onSurface }]}>
+                Loading audio...
+              </Text>
+            </View>
+          ) : audioError ? (
+            <View style={styles.errorContainer}>
+              <MaterialCommunityIcons name="alert-circle" size={24} color={theme.colors.error} />
+              <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                {audioError}
+              </Text>
+              <TouchableOpacity onPress={loadAudioUrl} style={styles.retryButton}>
+                <Text style={[styles.retryText, { color: theme.colors.primary }]}>
+                  Retry
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <ReactNativeAudioPlayer 
+              audioUrl={audioUrl}
+              title={card.title}
+              stage={parseInt(card.courseId)}
+              lessonId={card.stage}
+            />
+          )}
         </View>
       )}
 
@@ -582,5 +657,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Graphik-Semibold',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: 'Graphik-Regular',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    padding: 20,
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    fontFamily: 'Graphik-Regular',
+    textAlign: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  retryText: {
+    fontSize: 14,
+    fontFamily: 'Graphik-Medium',
   },
 });
