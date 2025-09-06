@@ -1,0 +1,64 @@
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { logger } from 'firebase-functions';
+
+// Weekly podcast generation - runs every Friday at 4 PM EST
+export const generateWeeklyPodcast = onSchedule({
+  schedule: '0 16 * * 5', // Cron: Every Friday at 4 PM
+  timeZone: 'America/New_York',
+  memory: '1GiB',
+  timeoutSeconds: 540, // 9 minutes
+}, async (event) => {
+  try {
+    logger.info('🎙️ Starting weekly podcast generation...');
+    
+    // Import the service (dynamic import for Firebase Functions)
+    const { weeklyPodcastService } = await import('../../../services/WeeklyPodcastService');
+    
+    // Check if podcast already exists for this week
+    const { weekOf } = getCurrentWeek();
+    const existingPodcast = await weeklyPodcastService.getExistingWeeklyPodcast(weekOf);
+    
+    if (existingPodcast) {
+      logger.info(`✅ Weekly podcast already exists for week: ${weekOf}`);
+      return;
+    }
+    
+    // Generate new weekly podcast
+    logger.info('🚀 Generating new weekly community podcast...');
+    const podcast = await weeklyPodcastService.generateWeeklyPodcast();
+    
+    // Create card for the podcast (for discovery feed)
+    const { cardService } = await import('../../services/CardService');
+    await cardService.generateCardFromPodcast({
+      id: podcast.id,
+      title: podcast.title,
+      description: podcast.description,
+      audioUrl: podcast.audioUrl,
+      weekNumber: podcast.weekOf,
+      segments: podcast.content.segments,
+      thumbnailUrl: podcast.thumbnailUrl,
+      tags: ['weekly', 'community', 'podcast', 'market-update']
+    });
+    
+    logger.info('✅ Weekly podcast generated and card created successfully!');
+    logger.info(`Podcast ID: ${podcast.id}, Week: ${podcast.weekOf}`);
+    
+  } catch (error) {
+    logger.error('❌ Error generating weekly podcast:', error);
+    throw error;
+  }
+});
+
+// Helper function to get current week identifier
+function getCurrentWeek(): { weekOf: string } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const weekNumber = getWeekNumber(now);
+  return { weekOf: `${year}-W${weekNumber.toString().padStart(2, '0')}` };
+}
+
+function getWeekNumber(date: Date): number {
+  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+  const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+  return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+}

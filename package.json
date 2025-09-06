@@ -60,6 +60,7 @@
     "expo-web-browser": "~14.0.2",
     "figma-api": "^2.0.2-beta",
     "firebase": "^12.2.1",
+    "firebase-admin": "^13.5.0",
     "fuse.js": "^7.1.0",
     "openai": "^4.83.0",
     "react": "18.3.1",

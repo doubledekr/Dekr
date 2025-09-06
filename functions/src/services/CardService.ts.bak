@@ -1,0 +1,97 @@
+import * as admin from 'firebase-admin';
+
+const db = admin.firestore();
+
+interface PodcastCardData {
+  id: string;
+  title: string;
+  description: string;
+  audioUrl: string;
+  weekNumber: string;
+  segments?: any[];
+  thumbnailUrl?: string;
+  tags?: string[];
+}
+
+interface UnifiedCard {
+  id: string;
+  type: 'lesson' | 'podcast' | 'news' | 'stock' | 'crypto' | 'challenge';
+  title: string;
+  description: string;
+  contentUrl?: string;
+  imageUrl?: string;
+  metadata: {
+    symbol?: string;
+    stage?: number;
+    weekNumber?: string;
+    difficulty?: string;
+    endDate?: admin.firestore.Timestamp;
+    sector?: string;
+  };
+  createdAt: admin.firestore.Timestamp;
+  priority: number;
+  tags: string[];
+  engagement: {
+    views: number;
+    saves: number;
+    shares: number;
+  };
+}
+
+export class CardService {
+  // Generate card from podcast data
+  async generateCardFromPodcast(podcastData: PodcastCardData): Promise<UnifiedCard> {
+    const card: UnifiedCard = {
+      id: `podcast_${podcastData.id}`,
+      type: 'podcast',
+      title: podcastData.title,
+      description: podcastData.description,
+      contentUrl: podcastData.audioUrl,
+      imageUrl: podcastData.thumbnailUrl,
+      metadata: {
+        weekNumber: podcastData.weekNumber,
+      },
+      createdAt: admin.firestore.Timestamp.now(),
+      priority: this.calculatePodcastPriority(podcastData),
+      tags: podcastData.tags || ['podcast', 'community'],
+      engagement: {
+        views: 0,
+        saves: 0,
+        shares: 0,
+      },
+    };
+
+    // Save to Firestore
+    await db.collection('cards').doc(card.id).set(card);
+    
+    return card;
+  }
+
+  // Calculate priority for podcast cards
+  private calculatePodcastPriority(podcastData: PodcastCardData): number {
+    let priority = 40;
+    const weekNumber = parseInt(podcastData.weekNumber);
+    if (!isNaN(weekNumber)) {
+      priority += Math.min(20, weekNumber);
+    }
+    return Math.min(100, priority);
+  }
+
+  // Check for duplicate cards
+  async checkForDuplicateCard(contentId: string, type: string): Promise<boolean> {
+    try {
+      const snapshot = await db
+        .collection('cards')
+        .where('id', '==', `${type}_${contentId}`)
+        .limit(1)
+        .get();
+      
+      return !snapshot.empty;
+    } catch (error) {
+      console.error('Error checking for duplicate card:', error);
+      return false;
+    }
+  }
+}
+
+export const cardService = new CardService();

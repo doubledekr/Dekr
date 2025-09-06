@@ -9,3 +9,4 @@ export * from './challenges';
 export * from './social';
 export * from './migrations/uploadLessonAudio';
 export * from './content/cardGenerator';
+// export * from './content/weeklyPodcastGenerator'; // Temporarily disabled due to TypeScript errors

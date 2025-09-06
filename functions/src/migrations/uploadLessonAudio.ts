@@ -101,7 +101,7 @@ export const uploadLessonAudio = functions
           
         } catch (error) {
           progress.failed++;
-          const errorMsg = `Failed to upload ${filename}: ${error.message}`;
+          const errorMsg = `Failed to upload ${filename}: ${error instanceof Error ? error.message : String(error)}`;
           progress.errors.push(errorMsg);
           console.error(`❌ ${errorMsg}`);
         }
@@ -130,7 +130,7 @@ export const uploadLessonAudio = functions
 
     } catch (error) {
       console.error('💥 Migration failed:', error);
-      throw new functions.https.HttpsError('internal', `Migration failed: ${error.message}`);
+      throw new functions.https.HttpsError('internal', `Migration failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -213,7 +213,7 @@ function parseLessonFilename(filename: string): { stage: number; lessonNumber: n
  * Generate lesson title based on stage and lesson number
  */
 function generateLessonTitle(stage: number, lessonNumber: number): string {
-  const stageTitles = {
+  const stageTitles: { [key: number]: string } = {
     1: 'Core Money Skills',
     2: 'Advanced Financial Concepts',
     3: 'Investment Strategies'
@@ -227,7 +227,7 @@ function generateLessonTitle(stage: number, lessonNumber: number): string {
  * Generate lesson description based on stage and lesson number
  */
 function generateLessonDescription(stage: number, lessonNumber: number): string {
-  const descriptions = {
+  const descriptions: { [key: number]: string } = {
     1: 'Learn the essential basics of money and finance',
     2: 'Master advanced financial concepts and strategies',
     3: 'Explore sophisticated investment strategies and portfolio management'
