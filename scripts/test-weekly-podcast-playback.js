@@ -41,7 +41,7 @@ async function testWeeklyPodcastPlayback() {
       id: `weekly_podcast_${currentDate}`,
       title: `Dekr Weekly Community Podcast - Week of ${currentDate}`,
       script: 'Welcome to the Dekr Weekly Community Podcast! This is a test podcast to verify playback functionality.',
-      audioUrl: 'https://firebasestorage.googleapis.com/v0/b/alpha-orbit.appspot.com/o/weekly-podcasts%2Ftest_podcast.mp3?alt=media',
+      audioUrl: 'https://firebasestorage.googleapis.com/v0/b/dekr-nextgen.appspot.com/o/weekly-podcasts%2Ftest_podcast.mp3?alt=media',
       duration: 180, // 3 minutes
       createdAt: new Date(),
       weekOf: currentDate,
@@ -102,7 +102,7 @@ async function testWeeklyPodcastPlayback() {
     console.log('🧪 Step 3: Testing different audio URL types...');
     
     const testUrls = [
-      'https://firebasestorage.googleapis.com/v0/b/alpha-orbit.appspot.com/o/weekly-podcasts%2Ftest.mp3?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/dekr-nextgen.appspot.com/o/weekly-podcasts%2Ftest.mp3?alt=media',
       'https://storage.autocontentapi.com/audio/test.mp3',
       'blob:http://localhost:8080/12345678-1234-1234-1234-123456789abc'
     ];

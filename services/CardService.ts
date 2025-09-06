@@ -395,7 +395,7 @@ export class CardService {
         .limit(limit)
         .get();
 
-      return snapshot.docs.map((doc: any) => ({
+      const cards = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate() || new Date(),
@@ -404,10 +404,253 @@ export class CardService {
           endDate: doc.data().metadata?.endDate?.toDate(),
         },
       }));
+
+      // If we're in Expo Go/Web mode and got no cards, return mock data
+      if (cards.length === 0 && (Platform.OS === 'web' || isExpoGo)) {
+        console.log(`🔄 No ${type} cards found, using mock data for development`);
+        return this.getMockCardsByType(type, limit);
+      }
+
+      return cards;
     } catch (error) {
       console.error(`Error getting ${type} cards:`, error);
+      // Fallback to mock data in development mode
+      if (Platform.OS === 'web' || isExpoGo) {
+        return this.getMockCardsByType(type, limit);
+      }
       return [];
     }
+  }
+
+  // Get mock cards for development/testing
+  private getMockCardsByType(type: string, limit: number): UnifiedCard[] {
+    const mockCards: { [key: string]: UnifiedCard[] } = {
+      lesson: [
+        {
+          id: 'lesson-1',
+          type: 'lesson',
+          title: 'Introduction to Stock Market Basics',
+          description: 'Learn the fundamentals of how the stock market works, including key concepts like stocks, bonds, and market indices.',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=400',
+          metadata: {
+            stage: 1,
+            difficulty: 'beginner',
+          },
+          createdAt: new Date(),
+          priority: 90,
+          tags: ['stocks', 'beginner', 'education'],
+          engagement: { views: 1250, saves: 89, shares: 23 }
+        },
+        {
+          id: 'lesson-2',
+          type: 'lesson',
+          title: 'Understanding Market Volatility',
+          description: 'Explore what causes market volatility and how to navigate uncertain market conditions.',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400',
+          metadata: {
+            stage: 2,
+            difficulty: 'intermediate',
+          },
+          createdAt: new Date(Date.now() - 86400000), // 1 day ago
+          priority: 85,
+          tags: ['volatility', 'intermediate', 'market-analysis'],
+          engagement: { views: 980, saves: 67, shares: 18 }
+        },
+        {
+          id: 'lesson-3',
+          type: 'lesson',
+          title: 'Technical Analysis Fundamentals',
+          description: 'Master the basics of reading charts, identifying trends, and using technical indicators.',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400',
+          metadata: {
+            stage: 3,
+            difficulty: 'intermediate',
+          },
+          createdAt: new Date(Date.now() - 172800000), // 2 days ago
+          priority: 80,
+          tags: ['technical-analysis', 'charts', 'indicators'],
+          engagement: { views: 756, saves: 45, shares: 12 }
+        }
+      ],
+      stock: [
+        {
+          id: 'stock-1',
+          type: 'stock',
+          title: 'Apple Inc. (AAPL)',
+          description: 'Apple Inc. stock analysis - Current price: $175.43 (+2.3%)',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=400',
+          metadata: {
+            symbol: 'AAPL',
+            sector: 'Technology',
+          },
+          createdAt: new Date(),
+          priority: 95,
+          tags: ['apple', 'technology', 'large-cap'],
+          engagement: { views: 2100, saves: 156, shares: 45 }
+        },
+        {
+          id: 'stock-2',
+          type: 'stock',
+          title: 'Tesla Inc. (TSLA)',
+          description: 'Tesla Inc. stock update - Current price: $248.87 (-1.2%)',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400',
+          metadata: {
+            symbol: 'TSLA',
+            sector: 'Automotive',
+          },
+          createdAt: new Date(Date.now() - 3600000), // 1 hour ago
+          priority: 88,
+          tags: ['tesla', 'electric-vehicles', 'automotive'],
+          engagement: { views: 1890, saves: 134, shares: 38 }
+        },
+        {
+          id: 'stock-3',
+          type: 'stock',
+          title: 'Microsoft Corporation (MSFT)',
+          description: 'Microsoft stock performance - Current price: $378.91 (+1.8%)',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400',
+          metadata: {
+            symbol: 'MSFT',
+            sector: 'Technology',
+          },
+          createdAt: new Date(Date.now() - 7200000), // 2 hours ago
+          priority: 82,
+          tags: ['microsoft', 'technology', 'cloud'],
+          engagement: { views: 1650, saves: 98, shares: 28 }
+        }
+      ],
+      news: [
+        {
+          id: 'news-1',
+          type: 'news',
+          title: 'Federal Reserve Hints at Rate Cut Possibility',
+          description: 'The Federal Reserve signaled potential interest rate cuts in response to economic indicators showing cooling inflation.',
+          contentUrl: 'https://example.com/fed-rate-cut',
+          imageUrl: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=400',
+          metadata: {},
+          createdAt: new Date(),
+          priority: 92,
+          tags: ['federal-reserve', 'interest-rates', 'economy'],
+          engagement: { views: 3200, saves: 234, shares: 67 }
+        },
+        {
+          id: 'news-2',
+          type: 'news',
+          title: 'Tech Stocks Rally on AI Investment News',
+          description: 'Major technology companies see stock price increases following announcements of increased AI research spending.',
+          contentUrl: 'https://example.com/tech-ai-rally',
+          imageUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400',
+          metadata: {},
+          createdAt: new Date(Date.now() - 1800000), // 30 minutes ago
+          priority: 87,
+          tags: ['technology', 'artificial-intelligence', 'stocks'],
+          engagement: { views: 2780, saves: 189, shares: 52 }
+        },
+        {
+          id: 'news-3',
+          type: 'news',
+          title: 'Energy Sector Shows Strong Q4 Performance',
+          description: 'Oil and gas companies report better-than-expected earnings for the fourth quarter.',
+          contentUrl: 'https://example.com/energy-q4-earnings',
+          imageUrl: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400',
+          metadata: {},
+          createdAt: new Date(Date.now() - 5400000), // 1.5 hours ago
+          priority: 75,
+          tags: ['energy', 'oil', 'earnings'],
+          engagement: { views: 1950, saves: 123, shares: 34 }
+        }
+      ],
+      podcast: [
+        {
+          id: 'podcast-1',
+          type: 'podcast',
+          title: 'Weekly Market Outlook',
+          description: 'This week\'s analysis of market trends, economic indicators, and investment opportunities.',
+          contentUrl: 'https://example.com/podcast-weekly-outlook.mp3',
+          imageUrl: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400',
+          metadata: {
+            weekNumber: 'Week 45',
+          },
+          createdAt: new Date(),
+          priority: 85,
+          tags: ['market-analysis', 'weekly', 'podcast'],
+          engagement: { views: 1450, saves: 98, shares: 25 }
+        },
+        {
+          id: 'podcast-2',
+          type: 'podcast',
+          title: 'Investment Strategies for Beginners',
+          description: 'Expert advice on building a solid investment portfolio from the ground up.',
+          contentUrl: 'https://example.com/podcast-beginner-strategies.mp3',
+          imageUrl: 'https://images.unsplash.com/photo-1559526324-c1f6730c2c44?w=400',
+          metadata: {
+            weekNumber: 'Week 44',
+          },
+          createdAt: new Date(Date.now() - 604800000), // 1 week ago
+          priority: 78,
+          tags: ['investment', 'beginner', 'strategies'],
+          engagement: { views: 1230, saves: 87, shares: 19 }
+        }
+      ],
+      crypto: [
+        {
+          id: 'crypto-1',
+          type: 'crypto',
+          title: 'Bitcoin (BTC)',
+          description: 'Bitcoin price update - Current: $43,250.00 (+3.2%)',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=400',
+          metadata: {
+            symbol: 'BTC',
+          },
+          createdAt: new Date(),
+          priority: 90,
+          tags: ['bitcoin', 'cryptocurrency', 'digital-assets'],
+          engagement: { views: 2800, saves: 198, shares: 56 }
+        },
+        {
+          id: 'crypto-2',
+          type: 'crypto',
+          title: 'Ethereum (ETH)',
+          description: 'Ethereum market analysis - Current: $2,680.45 (+1.8%)',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400',
+          metadata: {
+            symbol: 'ETH',
+          },
+          createdAt: new Date(Date.now() - 1800000), // 30 minutes ago
+          priority: 85,
+          tags: ['ethereum', 'cryptocurrency', 'smart-contracts'],
+          engagement: { views: 2350, saves: 167, shares: 43 }
+        }
+      ],
+      challenge: [
+        {
+          id: 'challenge-1',
+          type: 'challenge',
+          title: '30-Day Investment Challenge',
+          description: 'Join our month-long challenge to build better investment habits and learn key concepts.',
+          contentUrl: undefined,
+          imageUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400',
+          metadata: {
+            endDate: new Date(Date.now() + 2592000000), // 30 days from now
+          },
+          createdAt: new Date(),
+          priority: 95,
+          tags: ['challenge', 'investment', 'education'],
+          engagement: { views: 3200, saves: 456, shares: 89 }
+        }
+      ]
+    };
+
+    const cards = mockCards[type] || [];
+    return cards.slice(0, limit);
   }
 
   // Create a new card

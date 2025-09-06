@@ -115,7 +115,7 @@ export interface PersonalizationInsight {
   timestamp: Date;
 }
 
-export interface A/BTestResult {
+export interface ABTestResult {
   testId: string;
   variant: 'control' | 'treatment';
   userId: string;
@@ -570,12 +570,12 @@ export class PersonalizationAnalytics {
   }
 
   // Run A/B test
-  async runABTest(testId: string, userId: string, variant: 'control' | 'treatment'): Promise<A/BTestResult> {
+  async runABTest(testId: string, userId: string, variant: 'control' | 'treatment'): Promise<ABTestResult> {
     try {
       // This is a simplified A/B test implementation
       // In a real system, you'd have more sophisticated statistical analysis
       
-      const testResult: A/BTestResult = {
+      const testResult: ABTestResult = {
         testId,
         variant,
         userId,

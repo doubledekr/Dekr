@@ -15,13 +15,13 @@ if (Platform.OS === 'web') {
   
   // Firebase configuration for dekr-nextgen project
   const firebaseConfig = {
-    apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    apiKey: "AIzaSyBsOes01Lnp2leFMN_qJbk-_X6nZIlHvBU",
     authDomain: "dekr-nextgen.firebaseapp.com",
     projectId: "dekr-nextgen",
     storageBucket: "dekr-nextgen.appspot.com",
-    messagingSenderId: "123456789012",
-    appId: "1:123456789012:web:abcdef1234567890abcdef",
-    measurementId: "G-XXXXXXXXXX"
+    messagingSenderId: "152969284019",
+    appId: "1:152969284019:web:8c2a1d6a7d6a48c52623c6",
+    measurementId: "G-4TB90WRQ97"
   };
 
   // Initialize Firebase
@@ -147,10 +147,10 @@ if (Platform.OS !== 'web') {
   GoogleSignin.configure({
     // The webClientId is your Firebase Web Client ID (used for Android and iOS)
     // This should match the one in your Firebase console for dekr-nextgen
-    webClientId: '123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com',
+    webClientId: '152969284019-p42jnunll1hg2dqdcpqnacvvkjf9b9vs.apps.googleusercontent.com',
     
     // iOS-specific client ID from GoogleService-Info.plist (CLIENT_ID value)
-    iosClientId: Platform.OS === 'ios' ? '123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com' : undefined,
+    iosClientId: Platform.OS === 'ios' ? '152969284019-j97bp7t54c0p70i50t0tltt971c42qck.apps.googleusercontent.com' : undefined,
     
     // Required for offline access
     offlineAccess: true,
@@ -178,7 +178,7 @@ export const checkIOSGoogleSignInConfig = async (): Promise<void> => {
     console.log('📱 iOS Google Sign-In Configuration Check:');
     
     // 1. Check if iosClientId is configured
-    const iosClientId = '123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com';
+    const iosClientId = '152969284019-j97bp7t54c0p70i50t0tltt971c42qck.apps.googleusercontent.com';
     console.log(`✅ iOS Client ID: ${iosClientId}`);
     
     // 2. Check hasPlayServices (should work on iOS too)

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Share, Platform, Text, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Share, Platform, Text, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Swiper from 'react-native-deck-swiper';
 import { useTheme, FAB } from 'react-native-paper';
 import { UnifiedCard } from '../../components/UnifiedCard';
+import { NewsCardData } from '../../components/MarketCard';
 import { RootState } from '../../store/store';
 import { addToWatchlist, setWatchlistItems, removeFromWatchlist } from '../../store/slices/watchlistSlice';
 import { saveToWatchlist, loadWatchlist } from '../../services/firebase-platform';
@@ -135,6 +136,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const isFetchingRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [activeDeck, setActiveDeck] = useState<'stocks' | 'crypto' | 'discover' | 'watchlist'>('discover');
   
   // Add cache state
   const [cardCache, setCardCache] = useState<CardCache>({
@@ -198,6 +200,9 @@ export default function HomeScreen() {
               saves: 0,
               shares: 0,
             },
+            relevanceScore: 1.0,
+            personalizationReason: 'From your watchlist',
+            confidence: 0.9,
           }));
           setCards(watchlistCards);
         } else {
@@ -316,8 +321,7 @@ export default function HomeScreen() {
     }
   }, [activeDeck, loadMoreCards]);
 
-  // Add activeDeck state near the top of the component
-  const [activeDeck, setActiveDeck] = useState<'stocks' | 'crypto' | 'discover' | 'watchlist'>('discover');
+  // activeDeck state is now declared at the top of the component
 
   // Update the handleDeckSelect function
   const handleDeckSelect = (deckType: 'stocks' | 'crypto' | 'discover' | 'watchlist') => {
@@ -347,23 +351,26 @@ export default function HomeScreen() {
         // Check if card is already in watchlist
         const isAlreadyInWatchlist = watchlist.some(item => item.id === card.id);
         if (!isAlreadyInWatchlist) {
-          // Convert unified card to watchlist format
-          const watchlistItem = {
-            id: card.id,
-            type: card.type,
-            name: card.title,
-            symbol: card.metadata.symbol,
-            price: card.type === 'stock' || card.type === 'crypto' ? parseFloat(card.description.match(/\$([\d.]+)/)?.[1] || '0') : undefined,
-            headline: card.type === 'news' ? card.title : undefined,
-            content: card.type === 'news' ? card.description : undefined,
-            url: card.contentUrl,
-            imageUrl: card.imageUrl,
-            sector: card.metadata.sector,
-            tags: card.tags,
-          };
-          
-          await saveToWatchlist(user.uid, watchlistItem);
-          dispatch(addToWatchlist(watchlistItem));
+          // Only add stock and crypto cards to watchlist
+          if (card.type === 'stock' || card.type === 'crypto') {
+            // Convert unified card to watchlist format
+            const watchlistItem = {
+              id: card.id,
+              type: card.type as 'stock' | 'crypto',
+              name: card.title,
+              symbol: card.metadata.symbol || '',
+              price: parseFloat(card.description.match(/\$([\d.]+)/)?.[1] || '0'),
+              changePercentage: 0, // Default value
+              timestamp: Date.now(), // Default timestamp
+            };
+            
+            await saveToWatchlist(user.uid, watchlistItem);
+            dispatch(addToWatchlist(watchlistItem));
+          } else {
+            // For other card types, show a different message
+            Alert.alert('Info', 'This type of content cannot be added to watchlist');
+            return;
+          }
           
           // Update card engagement
           await cardService.updateCardEngagement(card.id, 'save');
@@ -410,7 +417,7 @@ export default function HomeScreen() {
         logEvent(AnalyticsEvents.REMOVE_FROM_WATCHLIST, {
           card_id: card.id,
           card_type: card.type,
-          symbol: card.type !== 'news' ? card.symbol : undefined,
+          symbol: card.type !== 'news' ? card.metadata.symbol : undefined,
         });
       } catch (error) {
         console.error('Error removing from watchlist:', error);
@@ -573,7 +580,7 @@ export default function HomeScreen() {
             onPress={togglePersonalization}
           >
             <MaterialCommunityIcons 
-              name={personalizationEnabled ? "brain" : "brain-outline"} 
+              name={personalizationEnabled ? "lightbulb" : "lightbulb-outline"} 
               size={16} 
               color={personalizationEnabled ? "#fff" : "#6b7280"} 
             />
@@ -775,8 +782,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   personalizationToggleActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: '#6CA393', // theme.colors.primary
+    borderColor: '#6CA393', // theme.colors.primary
   },
   personalizationText: {
     fontSize: 12,

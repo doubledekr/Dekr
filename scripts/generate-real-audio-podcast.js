@@ -41,12 +41,12 @@ async function generateRealAudioPodcast() {
     
     // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyBvOkBwJ1BqJ1BqJ1BqJ1BqJ1BqJ1BqJ1B",
-      authDomain: "alpha-orbit.firebaseapp.com",
-      projectId: "alpha-orbit",
-      storageBucket: "alpha-orbit.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdef123456789"
+      apiKey: "AIzaSyBsOes01Lnp2leFMN_qJbk-_X6nZIlHvBU",
+      authDomain: "dekr-nextgen.firebaseapp.com",
+      projectId: "dekr-nextgen",
+      storageBucket: "dekr-nextgen.appspot.com",
+      messagingSenderId: "152969284019",
+      appId: "1:152969284019:web:8c2a1d6a7d6a48c52623c6"
     };
     
     // Initialize Firebase

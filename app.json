@@ -18,7 +18,7 @@
       "supportsTablet": false,
       "buildNumber": "5",
       "bundleIdentifier": "com.dekr.app",
-      "googleServicesFile": "./requirement_files/GoogleService-Info.plist",
+      "googleServicesFile": "./ios/Dekr/GoogleService-Info.plist",
       "icon": "./assets/images/icon.png",
       "backgroundColor": "#6CA393"
     },
@@ -28,14 +28,14 @@
         "backgroundColor": "#6CA393"
       },
       "package": "com.dekr.app",
-      "googleServicesFile": "./requirement_files/google-services.json"
+      "googleServicesFile": "./android/app/google-services.json"
     },
     "plugins": [
+      "expo-dev-client",
       "@react-native-google-signin/google-signin",
       "expo-router",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
-      "expo-dev-client",
       [
         "expo-build-properties",
         {

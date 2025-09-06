@@ -207,7 +207,7 @@ export default function EducationScreen() {
                       <MaterialCommunityIcons 
                         name="chevron-right" 
                         size={24} 
-                        color={locked ? "#d1d5db" : "#6b7280"} 
+                        color={lesson.isLocked ? "#d1d5db" : "#6b7280"} 
                       />
                     </TouchableOpacity>
                   );

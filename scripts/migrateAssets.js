@@ -4,8 +4,8 @@ const path = require('path');
 
 // Initialize Firebase Admin using default credentials
 admin.initializeApp({
-  projectId: 'alpha-orbit',
-  storageBucket: 'alpha-orbit.appspot.com'
+  projectId: 'dekr-nextgen',
+  storageBucket: 'dekr-nextgen.appspot.com'
 });
 
 const db = admin.firestore();
