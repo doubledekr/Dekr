@@ -7,18 +7,18 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { engagementTracker, CardType, InteractionAction } from '../../services/EngagementTracker';
 import { useAuth } from '../../providers/AuthProvider';
 
-interface LessonCardProps {
+interface PodcastCardProps {
   data: UnifiedCard;
   onPlay?: () => void;
-  onComplete?: () => void;
+  onSubscribe?: () => void;
   position?: number; // Position in feed for tracking
 }
 
-export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCardProps) {
+export function PodcastCard({ data, onPlay, onSubscribe, position = 0 }: PodcastCardProps) {
   const theme = useTheme();
   const { user } = useAuth();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   
   // Engagement tracking
   const viewStartTime = useRef<number | null>(null);
@@ -34,7 +34,7 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
       engagementTracker.trackCardInteraction(
         user.uid,
         data.id,
-        'lesson',
+        'podcast',
         'view',
         {
           position,
@@ -55,7 +55,7 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
         engagementTracker.trackCardInteraction(
           user.uid,
           data.id,
-          'lesson',
+          'podcast',
           'view',
           {
             position,
@@ -76,7 +76,7 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
       engagementTracker.trackCardInteraction(
         user.uid,
         data.id,
-        'lesson',
+        'podcast',
         'play',
         {
           position,
@@ -89,17 +89,17 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
     onPlay?.();
   };
 
-  const handleComplete = () => {
+  const handleSubscribe = () => {
     safeHapticImpact();
-    setIsCompleted(true);
+    setIsSubscribed(!isSubscribed);
     
-    // Track completion interaction
+    // Track subscribe interaction
     if (user) {
       engagementTracker.trackCardInteraction(
         user.uid,
         data.id,
-        'lesson',
-        'complete',
+        'podcast',
+        'save', // Subscribe is a save action
         {
           position,
           timeSpent: viewStartTime.current ? Date.now() - viewStartTime.current : 0,
@@ -108,33 +108,7 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
       );
     }
     
-    onComplete?.();
-  };
-
-  const getDifficultyColor = (difficulty?: string) => {
-    switch (difficulty) {
-      case 'beginner':
-        return '#4CAF50';
-      case 'intermediate':
-        return '#FF9800';
-      case 'advanced':
-        return '#F44336';
-      default:
-        return '#9E9E9E';
-    }
-  };
-
-  const getDifficultyIcon = (difficulty?: string) => {
-    switch (difficulty) {
-      case 'beginner':
-        return 'star-outline';
-      case 'intermediate':
-        return 'star-half-full';
-      case 'advanced':
-        return 'star';
-      default:
-        return 'star-outline';
-    }
+    onSubscribe?.();
   };
 
   return (
@@ -142,11 +116,11 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.typeIndicator}>
-          <MaterialCommunityIcons name="school" size={20} color="#1976D2" />
-          <Text style={styles.typeText}>LESSON</Text>
+          <MaterialCommunityIcons name="podcast" size={20} color="#388E3C" />
+          <Text style={styles.typeText}>PODCAST</Text>
         </View>
-        <View style={styles.stageBadge}>
-          <Text style={styles.stageText}>Stage {data.metadata.stage}</Text>
+        <View style={styles.weekBadge}>
+          <Text style={styles.weekText}>Week {data.metadata.weekNumber}</Text>
         </View>
       </View>
 
@@ -154,6 +128,9 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
       {data.imageUrl && (
         <View style={styles.imageContainer}>
           <Image source={{ uri: data.imageUrl }} style={styles.image} resizeMode="cover" />
+          <View style={styles.playOverlay}>
+            <MaterialCommunityIcons name="play-circle" size={48} color="rgba(255,255,255,0.9)" />
+          </View>
         </View>
       )}
 
@@ -166,16 +143,18 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
           {data.description}
         </Text>
 
-        {/* Difficulty and Stage */}
-        <View style={styles.metadata}>
-          <View style={styles.difficultyContainer}>
-            <MaterialCommunityIcons
-              name={getDifficultyIcon(data.metadata.difficulty) as any}
-              size={16}
-              color={getDifficultyColor(data.metadata.difficulty)}
-            />
-            <Text style={[styles.difficultyText, { color: getDifficultyColor(data.metadata.difficulty) }]}>
-              {data.metadata.difficulty?.toUpperCase() || 'UNKNOWN'}
+        {/* Episode Info */}
+        <View style={styles.episodeInfo}>
+          <View style={styles.episodeItem}>
+            <MaterialCommunityIcons name="calendar" size={16} color={theme.colors.primary} />
+            <Text style={[styles.episodeText, { color: theme.colors.onSurfaceVariant }]}>
+              Week {data.metadata.weekNumber}
+            </Text>
+          </View>
+          <View style={styles.episodeItem}>
+            <MaterialCommunityIcons name="clock-outline" size={16} color={theme.colors.primary} />
+            <Text style={[styles.episodeText, { color: theme.colors.onSurfaceVariant }]}>
+              ~30 min
             </Text>
           </View>
         </View>
@@ -184,8 +163,8 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
         {data.tags && data.tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {data.tags.slice(0, 3).map((tag, index) => (
-              <View key={index} style={[styles.tag, { backgroundColor: theme.colors.primaryContainer }]}>
-                <Text style={[styles.tagText, { color: theme.colors.onPrimaryContainer }]}>
+              <View key={index} style={[styles.tag, { backgroundColor: theme.colors.secondaryContainer }]}>
+                <Text style={[styles.tagText, { color: theme.colors.onSecondaryContainer }]}>
                   {tag}
                 </Text>
               </View>
@@ -210,27 +189,61 @@ export function LessonCard({ data, onPlay, onComplete, position = 0 }: LessonCar
               color="white"
             />
             <Text style={styles.playButtonText}>
-              {isPlaying ? 'Pause' : 'Play'}
+              {isPlaying ? 'Pause' : 'Play Episode'}
             </Text>
           </TouchableOpacity>
         )}
 
-        {!isCompleted && (
-          <TouchableOpacity
-            style={[styles.completeButton, { backgroundColor: theme.colors.secondary }]}
-            onPress={handleComplete}
-          >
-            <MaterialCommunityIcons name="check" size={20} color="white" />
-            <Text style={styles.completeButtonText}>Complete</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={[
+            styles.subscribeButton,
+            { 
+              backgroundColor: isSubscribed ? theme.colors.secondary : theme.colors.outline,
+              borderColor: theme.colors.outline,
+              borderWidth: 1,
+            }
+          ]}
+          onPress={handleSubscribe}
+        >
+          <MaterialCommunityIcons 
+            name={isSubscribed ? 'bell' : 'bell-outline'} 
+            size={20} 
+            color={isSubscribed ? 'white' : theme.colors.onSurfaceVariant} 
+          />
+          <Text style={[
+            styles.subscribeButtonText,
+            { color: isSubscribed ? 'white' : theme.colors.onSurfaceVariant }
+          ]}>
+            {isSubscribed ? 'Subscribed' : 'Subscribe'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-        {isCompleted && (
-          <View style={[styles.completedBadge, { backgroundColor: theme.colors.primary }]}>
-            <MaterialCommunityIcons name="check-circle" size={20} color="white" />
-            <Text style={styles.completedText}>Completed</Text>
+      {/* Episode Segments Preview */}
+      <View style={styles.segmentsPreview}>
+        <Text style={[styles.segmentsTitle, { color: theme.colors.onSurface }]}>
+          Episode Segments:
+        </Text>
+        <View style={styles.segmentsList}>
+          <View style={styles.segmentItem}>
+            <MaterialCommunityIcons name="play-circle-outline" size={16} color={theme.colors.primary} />
+            <Text style={[styles.segmentText, { color: theme.colors.onSurfaceVariant }]}>
+              Market Overview (5:30)
+            </Text>
           </View>
-        )}
+          <View style={styles.segmentItem}>
+            <MaterialCommunityIcons name="play-circle-outline" size={16} color={theme.colors.primary} />
+            <Text style={[styles.segmentText, { color: theme.colors.onSurfaceVariant }]}>
+              Trading Strategies (12:45)
+            </Text>
+          </View>
+          <View style={styles.segmentItem}>
+            <MaterialCommunityIcons name="play-circle-outline" size={16} color={theme.colors.primary} />
+            <Text style={[styles.segmentText, { color: theme.colors.onSurfaceVariant }]}>
+              Q&A Session (8:20)
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* Engagement Stats */}
@@ -274,7 +287,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#E8F5E8',
   },
   typeIndicator: {
     flexDirection: 'row',
@@ -284,16 +297,16 @@ const styles = StyleSheet.create({
   typeText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#1976D2',
+    color: '#388E3C',
     letterSpacing: 0.5,
   },
-  stageBadge: {
-    backgroundColor: '#1976D2',
+  weekBadge: {
+    backgroundColor: '#388E3C',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  stageText: {
+  weekText: {
     color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
@@ -301,10 +314,21 @@ const styles = StyleSheet.create({
   imageContainer: {
     height: 120,
     backgroundColor: '#F5F5F5',
+    position: 'relative',
   },
   image: {
     width: '100%',
     height: '100%',
+  },
+  playOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   content: {
     padding: 16,
@@ -320,18 +344,19 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
-  metadata: {
+  episodeInfo: {
+    flexDirection: 'row',
+    gap: 16,
     marginBottom: 12,
   },
-  difficultyContainer: {
+  episodeItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  difficultyText: {
+  episodeText: {
     fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    fontWeight: '500',
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -354,7 +379,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   playButton: {
-    flex: 1,
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -367,7 +392,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  completeButton: {
+  subscribeButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -376,24 +401,30 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
-  completeButtonText: {
-    color: 'white',
+  subscribeButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
   },
-  completedBadge: {
-    flex: 1,
+  segmentsPreview: {
+    padding: 16,
+    paddingTop: 0,
+  },
+  segmentsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  segmentsList: {
+    gap: 6,
+  },
+  segmentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
   },
-  completedText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
+  segmentText: {
+    fontSize: 12,
+    flex: 1,
   },
   engagement: {
     flexDirection: 'row',

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Pressable, ViewStyle, TouchableWithoutFeedback, TouchableOpacity, GestureResponderEvent, Image, Linking, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Icon, useTheme } from 'react-native-paper';
 import { MarketCard as MarketCardType } from '../store/slices/watchlistSlice';
+import { UnifiedCard } from '../services/CardService';
 import { safeHapticImpact } from '../utils/haptics';
 import Animated, { interpolate, useAnimatedStyle, withTiming, useSharedValue, withSpring } from 'react-native-reanimated';
 import { VectorBadge } from './VectorBadge';
@@ -11,6 +12,8 @@ import { PriceChart } from './PriceChart';
 import { useRouter } from 'expo-router';
 import { logEvent, AnalyticsEvents } from '../services/analytics';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { engagementTracker, CardType, InteractionAction } from '../services/EngagementTracker';
+import { useAuth } from '../providers/AuthProvider';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(width * 0.9, 380);
@@ -31,11 +34,54 @@ export interface NewsCardData {
   sentimentScore?: number;
 }
 
-type CardData = MarketCardType | NewsCardData;
+type CardData = MarketCardType | NewsCardData | UnifiedCard;
 
 interface MarketCardProps {
   data: CardData;
   onFlip?: () => void;
+  position?: number; // Position in feed for tracking
+}
+
+// Helper function to convert UnifiedCard to legacy format
+function convertUnifiedCardToLegacy(unifiedCard: UnifiedCard): MarketCardType | NewsCardData {
+  if (unifiedCard.type === 'news') {
+    return {
+      id: unifiedCard.id,
+      type: 'news',
+      headline: unifiedCard.title,
+      content: unifiedCard.description,
+      source: 'Financial News',
+      timestamp: unifiedCard.createdAt.getTime(),
+      imageUrl: unifiedCard.imageUrl,
+      url: unifiedCard.contentUrl || '',
+      sentiment: unifiedCard.tags.includes('positive') ? 'positive' : 
+                 unifiedCard.tags.includes('negative') ? 'negative' : 'neutral',
+      tickers: unifiedCard.tags.filter(tag => tag.startsWith('$')),
+    } as NewsCardData;
+  } else {
+    // Extract price and change from description for market data
+    const priceMatch = unifiedCard.description.match(/\$([\d.]+)/);
+    const changeMatch = unifiedCard.description.match(/\(([+-]?[\d.]+)%\)/);
+    
+    return {
+      id: unifiedCard.id,
+      type: unifiedCard.type as 'stock' | 'crypto',
+      symbol: unifiedCard.metadata.symbol || '',
+      name: unifiedCard.title,
+      price: priceMatch ? parseFloat(priceMatch[1]) : 0,
+      changePercentage: changeMatch ? parseFloat(changeMatch[1]) : 0,
+      sector: unifiedCard.metadata.sector,
+      marketCap: 0,
+      volume: 0,
+      high24h: 0,
+      low24h: 0,
+      open24h: 0,
+      grade: 'B',
+      volatility: 'Medium',
+      currentSignal: 'Hold',
+      sentiment: 'neutral',
+    } as MarketCardType;
+  }
 }
 
 function getCardColors(type: string) {
@@ -68,16 +114,71 @@ function getCardColors(type: string) {
   }
 }
 
-export function MarketCard({ data, onFlip }: MarketCardProps) {
+export function MarketCard({ data, onFlip, position = 0 }: MarketCardProps) {
   const spin = useSharedValue(0);
   const sentimentExpand = useSharedValue(0);
   const [selectedSentiment, setSelectedSentiment] = useState<'bullish' | 'bearish' | null>(null);
   const theme = useTheme();
-  const colors = getCardColors(data.type);
+  const { user } = useAuth();
+  
+  // Convert unified card to legacy format if needed
+  const legacyData = 'metadata' in data ? convertUnifiedCardToLegacy(data as UnifiedCard) : data;
+  const colors = getCardColors(legacyData.type);
   const isSentimentPress = React.useRef(false);
   const router = useRouter();
+  
+  // Engagement tracking
+  const viewStartTime = useRef<number | null>(null);
+  const hasTrackedView = useRef(false);
 
   // console.log('Card Data:', data)
+
+  // Track card view start
+  useEffect(() => {
+    if (user && !hasTrackedView.current) {
+      viewStartTime.current = Date.now();
+      engagementTracker.trackCardViewStart(legacyData.id);
+      
+      // Track view interaction
+      const cardType = legacyData.type === 'news' ? 'news' : 
+                      legacyData.type === 'crypto' ? 'crypto' : 'stock';
+      
+      engagementTracker.trackCardInteraction(
+        user.uid,
+        legacyData.id,
+        cardType as CardType,
+        'view',
+        {
+          position,
+          timeSpent: 0,
+          sessionId: engagementTracker.getSessionContext().sessionId
+        }
+      );
+      
+      hasTrackedView.current = true;
+    }
+
+    // Cleanup: track view end when component unmounts
+    return () => {
+      if (user && viewStartTime.current) {
+        const timeSpent = engagementTracker.trackCardViewEnd(legacyData.id);
+        
+        // Update the view interaction with actual time spent
+        engagementTracker.trackCardInteraction(
+          user.uid,
+          legacyData.id,
+          (legacyData.type === 'news' ? 'news' : 
+           legacyData.type === 'crypto' ? 'crypto' : 'stock') as CardType,
+          'view',
+          {
+            position,
+            timeSpent,
+            sessionId: engagementTracker.getSessionContext().sessionId
+          }
+        );
+      }
+    };
+  }, [user, legacyData.id, position]);
 
   const frontAnimatedStyle = useAnimatedStyle(() => {
     const spinVal = interpolate(spin.value, [0, 1], [0, 180]);
@@ -131,12 +232,30 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
     spin.value = withTiming(spin.value ? 0 : 1, { duration: 500 });
     onFlip?.();
 
+    // Track flip interaction
+    if (user) {
+      const cardType = legacyData.type === 'news' ? 'news' : 
+                      legacyData.type === 'crypto' ? 'crypto' : 'stock';
+      
+      engagementTracker.trackCardInteraction(
+        user.uid,
+        legacyData.id,
+        cardType as CardType,
+        'view', // Flip is considered a view interaction
+        {
+          position,
+          timeSpent: viewStartTime.current ? Date.now() - viewStartTime.current : 0,
+          sessionId: engagementTracker.getSessionContext().sessionId
+        }
+      );
+    }
+
     // Log card view event
     logEvent(AnalyticsEvents.VIEW_CARD, {
-      card_id: data.id,
-      card_type: data.type,
-      symbol: data.type !== 'news' ? data.symbol : undefined,
-      headline: data.type === 'news' ? (data as NewsCardData).headline : undefined,
+      card_id: legacyData.id,
+      card_type: legacyData.type,
+      symbol: legacyData.type !== 'news' ? legacyData.symbol : undefined,
+      headline: legacyData.type === 'news' ? (legacyData as NewsCardData).headline : undefined,
     });
   };
 
@@ -150,11 +269,28 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
       setSelectedSentiment('bullish');
       sentimentExpand.value = withSpring(1);
 
+      // Track sentiment interaction
+      if (user && legacyData.type !== 'news') {
+        const cardType = legacyData.type === 'crypto' ? 'crypto' : 'stock';
+        
+        engagementTracker.trackCardInteraction(
+          user.uid,
+          legacyData.id,
+          cardType as CardType,
+          'swipe_right', // Bullish sentiment is positive engagement
+          {
+            position,
+            timeSpent: viewStartTime.current ? Date.now() - viewStartTime.current : 0,
+            sessionId: engagementTracker.getSessionContext().sessionId
+          }
+        );
+      }
+
       // Log sentiment event
-      if (data.type !== 'news') {
+      if (legacyData.type !== 'news') {
         logEvent(AnalyticsEvents.SET_SENTIMENT, {
-          card_id: data.id,
-          symbol: data.symbol,
+          card_id: legacyData.id,
+          symbol: legacyData.symbol,
           sentiment: 'bullish',
         });
       }
@@ -172,11 +308,28 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
       setSelectedSentiment('bearish');
       sentimentExpand.value = withSpring(1);
 
+      // Track sentiment interaction
+      if (user && legacyData.type !== 'news') {
+        const cardType = legacyData.type === 'crypto' ? 'crypto' : 'stock';
+        
+        engagementTracker.trackCardInteraction(
+          user.uid,
+          legacyData.id,
+          cardType as CardType,
+          'swipe_left', // Bearish sentiment is negative engagement
+          {
+            position,
+            timeSpent: viewStartTime.current ? Date.now() - viewStartTime.current : 0,
+            sessionId: engagementTracker.getSessionContext().sessionId
+          }
+        );
+      }
+
       // Log sentiment event
-      if (data.type !== 'news') {
+      if (legacyData.type !== 'news') {
         logEvent(AnalyticsEvents.SET_SENTIMENT, {
-          card_id: data.id,
-          symbol: data.symbol,
+          card_id: legacyData.id,
+          symbol: legacyData.symbol,
           sentiment: 'bearish',
         });
       }
@@ -313,7 +466,7 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
   };
 
   const renderNewsCard = (isBack: boolean = false) => {
-    const newsData = data as NewsCardData;
+    const newsData = legacyData as NewsCardData;
     
     if (!isBack) {
       return (
@@ -440,44 +593,44 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
 
   const renderFront = () => (
     <Animated.View style={[styles.cardFace, frontAnimatedStyle]}>
-      {data.type === 'news' ? renderNewsCard() : (
+      {legacyData.type === 'news' ? renderNewsCard() : (
         <>
           <View style={styles.cardContent}>
             {/* Add background image */}
             <Image 
-              source={data.type === 'crypto' 
+              source={legacyData.type === 'crypto' 
                 ? require('../assets/images/crypto-bg.png') 
                 : require('../assets/images/stock-bg.png')} 
               style={styles.cardBackgroundImage} 
               resizeMode="cover"
             />
             <View style={[styles.cornerLabel, { backgroundColor: colors.ribbon }]}>
-              <Text style={[styles.cornerLabelText, { color: colors.ribbonText }]}>{data.type.toUpperCase()}</Text>
+              <Text style={[styles.cornerLabelText, { color: colors.ribbonText }]}>{legacyData.type.toUpperCase()}</Text>
             </View>
 
             <View style={styles.symbolBadge}>
               <VectorBadge width={82} height={80} color={colors.text} />
               <View style={styles.symbolBadgeInner}>
-                <Text style={[styles.symbolBadgeText, { color: colors.text }]}>{data.symbol}</Text>
+                <Text style={[styles.symbolBadgeText, { color: colors.text }]}>{legacyData.symbol}</Text>
               </View>
             </View>
 
             <View style={styles.nameContainer}>
-              <Text style={[styles.name, { color: colors.text }]}>{data.name}</Text>
+              <Text style={[styles.name, { color: colors.text }]}>{legacyData.name}</Text>
             </View>
 
             <View style={styles.pillContainer}>
-              {data.exchange && (
+              {legacyData.exchange && (
                 <View style={[styles.pill, { backgroundColor: colors.ribbon }]}>
                   <Text style={[styles.pillText, { color: colors.ribbonText }]}>
-                    {data.exchange}
+                    {legacyData.exchange}
                   </Text>
                 </View>
               )}
-              {data.sector && (
+              {legacyData.sector && (
                 <View style={[styles.pill, { backgroundColor: colors.ribbon }]}>
                   <Text style={[styles.pillText, { color: colors.ribbonText }]}>
-                    {data.sector}
+                    {legacyData.sector}
                   </Text>
                 </View>
               )}
@@ -487,19 +640,19 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
               <View style={styles.changeIndicator}>
                 <Text style={[
                   styles.changePercentage,
-                  { color: data.changePercentage && data.changePercentage >= 0 ? '#006837' : '#9B2C2C' }
+                  { color: legacyData.changePercentage && legacyData.changePercentage >= 0 ? '#006837' : '#9B2C2C' }
                 ]}>
-                  {data.changePercentage && data.changePercentage >= 0 ? <Icon source={'arrow-up'} size={60} color='#006837'/> : <Icon source={'arrow-down'} size={60} color={'#9B2C2C'} />}
+                  {legacyData.changePercentage && legacyData.changePercentage >= 0 ? <Icon source={'arrow-up'} size={60} color='#006837'/> : <Icon source={'arrow-down'} size={60} color={'#9B2C2C'} />}
                 </Text>
                 <Text style={[
                   styles.changePercentage,
-                  { color: data.changePercentage && data.changePercentage >= 0 ? '#006837' : '#9B2C2C' }
+                  { color: legacyData.changePercentage && legacyData.changePercentage >= 0 ? '#006837' : '#9B2C2C' }
                   ]}>
-                  {Math.abs(data.changePercentage || 0).toFixed(2)}%
+                  {Math.abs(legacyData.changePercentage || 0).toFixed(2)}%
                 </Text>
               </View>
               <View style={{marginHorizontal: 'auto'}}>
-                <Text style={styles.price}>${data.price}</Text>
+                <Text style={styles.price}>${legacyData.price}</Text>
               </View>
             </View>
           </View>
@@ -510,7 +663,7 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
 
   const renderBack = () => (
     <Animated.View style={[styles.cardFace, backAnimatedStyle]}>
-      {data.type === 'news' ? renderNewsCard(true) : (
+      {legacyData.type === 'news' ? renderNewsCard(true) : (
         <>
           <ScrollView 
             style={styles.cardContent}
@@ -521,23 +674,23 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
             
             <View style={[styles.backHeader, { backgroundColor: 'transparent' }]}>
               <Text style={[styles.backSymbol, { color: colors.text }]}>
-                {data.symbol}
+                {legacyData.symbol}
               </Text>
             </View>
 
             <View style={[styles.backStatsGrid, { backgroundColor: 'rgba(245, 245, 220, 0.85)' }]}>
-              {data.type === 'crypto' ? (
+              {legacyData.type === 'crypto' ? (
                 <>
                   <View style={styles.backStatBox}>
                     <Text style={[styles.backStatLabel, { color: colors.text }]}>24h High</Text>
                     <Text style={[styles.backStatValue, { color: colors.text }]}>
-                      {formatNumber(data.high24h || 0)}
+                      {formatNumber(legacyData.high24h || 0)}
                     </Text>
                   </View>
                   <View style={[styles.backStatBox, styles.backStatBoxRight]}>
                     <Text style={[styles.backStatLabel, { color: colors.text }]}>24h Low</Text>
                     <Text style={[styles.backStatValue, { color: colors.text }]}>
-                      {formatNumber(data.low24h || 0)}
+                      {formatNumber(legacyData.low24h || 0)}
                     </Text>
                   </View>
                 </>
@@ -546,13 +699,13 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
                   <View style={styles.backStatBox}>
                     <Text style={[styles.backStatLabel, { color: colors.text }]}>Market Cap</Text>
                     <Text style={[styles.backStatValue, { color: colors.text }]}>
-                      ${formatLargeNumber(data.marketCap || 0)}
+                      ${formatLargeNumber(legacyData.marketCap || 0)}
                     </Text>
                   </View>
                   <View style={[styles.backStatBox, styles.backStatBoxRight]}>
                     <Text style={[styles.backStatLabel, { color: colors.text }]}>24h volume</Text>
                     <Text style={[styles.backStatValue, { color: colors.text }]}>
-                      ${formatLargeNumber(data.volume || 0)}
+                      ${formatLargeNumber(legacyData.volume || 0)}
                     </Text>
                   </View>
                 </>
@@ -564,14 +717,14 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
               <View style={styles.metricRow}>
                 <View style={styles.metricBox}>
                   <Text style={[styles.metricLabel, { color: colors.text }]}>Grade</Text>
-                  <Text style={[styles.metricValue, { color: getGradeColor(data.grade) }]}>
-                    {data.grade || '-'}
+                  <Text style={[styles.metricValue, { color: getGradeColor(legacyData.grade) }]}>
+                    {legacyData.grade || '-'}
                   </Text>
                 </View>
                 <View style={styles.metricBox}>
                   <Text style={[styles.metricLabel, { color: colors.text }]}>Volatility</Text>
-                  <Text style={[styles.metricValue, { color: getVolatilityColor(data.volatility) }]}>
-                    {data.volatility || '-'}
+                  <Text style={[styles.metricValue, { color: getVolatilityColor(legacyData.volatility) }]}>
+                    {legacyData.volatility || '-'}
                   </Text>
                 </View>
               </View>
@@ -579,26 +732,26 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
               <View style={styles.metricRow}>
                 <View style={styles.metricBox}>
                   <Text style={[styles.metricLabel, { color: colors.text }]}>Signal</Text>
-                  <Text style={[styles.metricValue, { color: getSignalColor(data.currentSignal) }]}>
-                    {data.currentSignal || '-'}
+                  <Text style={[styles.metricValue, { color: getSignalColor(legacyData.currentSignal) }]}>
+                    {legacyData.currentSignal || '-'}
                   </Text>
                 </View>
                 {/* <View style={styles.metricBox}>
                   <Text style={[styles.metricLabel, { color: colors.text }]}>P/E Ratio</Text>
                   <Text style={[styles.metricValue, { color: colors.text }]}>
-                    {data.peRatio ? data.peRatio.toFixed(2) : '-'}
+                    {legacyData.peRatio ? legacyData.peRatio.toFixed(2) : '-'}
                   </Text>
                 </View> */}
                 <View style={[styles.metricBox, styles.fullWidth]}>
                   <Text style={[styles.metricLabel, { color: colors.text }]}>Sentiment</Text>
                   <View style={styles.row}>
                     <MaterialCommunityIcons
-                      name={getSentimentIcon(data.sentiment)}
+                      name={getSentimentIcon(legacyData.sentiment)}
                       size={20}
-                      color={getSentimentColor(data.sentiment)}
+                      color={getSentimentColor(legacyData.sentiment)}
                     />
-                    <Text style={[styles.metricValue, { color: getSentimentColor(data.sentiment) }]}>
-                      {data.sentiment ? data.sentiment.charAt(0).toUpperCase() + data.sentiment.slice(1) : '-'}
+                    <Text style={[styles.metricValue, { color: getSentimentColor(legacyData.sentiment) }]}>
+                      {legacyData.sentiment ? legacyData.sentiment.charAt(0).toUpperCase() + legacyData.sentiment.slice(1) : '-'}
                     </Text>
                   </View>
                 </View>
@@ -613,10 +766,10 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
               <Text style={[styles.backPriceHistoryTitle, { color: colors.text }]}>
                 6 month price history
               </Text>
-              {data.priceHistory ? (
+              {legacyData.priceHistory ? (
                 <PriceChart
-                  data={data.priceHistory.prices}
-                  labels={data.priceHistory.labels}
+                  data={legacyData.priceHistory.prices}
+                  labels={legacyData.priceHistory.labels}
                   height={CHART_HEIGHT}
                   width={CARD_WIDTH - 60}
                   color={colors.text}
@@ -631,27 +784,27 @@ export function MarketCard({ data, onFlip }: MarketCardProps) {
             </View>
 
             {/* Ticker-specific news section */}
-            {data.tickerNews && data.tickerNews.length > 0 && (
+            {legacyData.tickerNews && legacyData.tickerNews.length > 0 && (
               <View style={[styles.tickerNewsSection, { backgroundColor: colors.background }]}>
                 <View style={styles.tickerNewsHeader}>
                   <Text style={[styles.tickerNewsTitle, { color: colors.text }]}>
                     📰 Related News
                   </Text>
-                  {data.newsSentimentScore !== undefined && (
+                  {legacyData.newsSentimentScore !== undefined && (
                     <View style={[
                       styles.newsSentimentBadge,
-                      { backgroundColor: data.newsSentimentScore > 0.1 ? '#10B981' : 
-                                        data.newsSentimentScore < -0.1 ? '#EF4444' : '#6B7280' }
+                      { backgroundColor: legacyData.newsSentimentScore > 0.1 ? '#10B981' : 
+                                        legacyData.newsSentimentScore < -0.1 ? '#EF4444' : '#6B7280' }
                     ]}>
                       <Text style={styles.newsSentimentText}>
-                        {data.newsSentimentScore > 0.1 ? '📈 Positive' : 
-                         data.newsSentimentScore < -0.1 ? '📉 Negative' : '➡️ Neutral'}
+                        {legacyData.newsSentimentScore > 0.1 ? '📈 Positive' : 
+                         legacyData.newsSentimentScore < -0.1 ? '📉 Negative' : '➡️ Neutral'}
                       </Text>
                     </View>
                   )}
                 </View>
                 <View style={styles.newsScrollView}>
-                  {data.tickerNews.slice(0, 3).map((news, index) => (
+                  {legacyData.tickerNews.slice(0, 3).map((news, index) => (
                     <TouchableOpacity
                       key={news.id}
                       style={[styles.newsItem, { borderBottomColor: colors.text + '20' }]}

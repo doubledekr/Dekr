@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Share, Platform, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Share, Platform, Text, TouchableOpacity, RefreshControl } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Swiper from 'react-native-deck-swiper';
 import { useTheme, FAB } from 'react-native-paper';
-import { MarketCard } from '../../components/MarketCard';
+import { UnifiedCard } from '../../components/UnifiedCard';
 import { RootState } from '../../store/store';
 import { addToWatchlist, setWatchlistItems, removeFromWatchlist } from '../../store/slices/watchlistSlice';
 import { saveToWatchlist, loadWatchlist } from '../../services/firebase-platform';
 import { safeHapticImpact, safeHapticNotification } from '../../utils/haptics';
 import { DeckScrollView } from '../../components/DeckScrollView';
-import { NewsCardData } from '../../components/MarketCard';
+import { cardService, UnifiedCard as UnifiedCardType } from '../../services/CardService';
+import { PersonalizedCard } from '../../services/PersonalizationEngine';
+import { personalizationAnalytics } from '../../services/PersonalizationAnalytics';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +20,7 @@ import axios from 'axios';
 import { logEvent, AnalyticsEvents } from '../../services/analytics';
 import { getRandomMarketData, SearchResult } from '../../services/market-data';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Haptics from 'expo-haptics';
 
 interface PriceHistory {
   prices: number[];
@@ -123,11 +126,15 @@ export default function HomeScreen() {
   const theme = useTheme();
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
-  const [cards, setCards] = useState<any[]>([]);
+  const [cards, setCards] = useState<PersonalizedCard[]>([]);
+  const [personalizationEnabled, setPersonalizationEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const swiperRef = useRef<Swiper<any>>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasMoreCards, setHasMoreCards] = useState(true);
+  const swiperRef = useRef<Swiper<PersonalizedCard>>(null);
   const insets = useSafeAreaInsets();
   const isFetchingRef = useRef(false);
+  const [currentPage, setCurrentPage] = useState(0);
   
   // Add cache state
   const [cardCache, setCardCache] = useState<CardCache>({
@@ -163,7 +170,7 @@ export default function HomeScreen() {
     loadUserWatchlist();
   }, [user]);
 
-  const loadMoreCards = useCallback(async (type?: 'stocks' | 'crypto' | 'discover' | 'watchlist') => {
+  const loadMoreCards = useCallback(async (type?: 'stocks' | 'crypto' | 'discover' | 'watchlist', isRefresh: boolean = false) => {
     if (isFetchingRef.current) return;
     
     try {
@@ -171,7 +178,28 @@ export default function HomeScreen() {
       if (type === 'watchlist') {
         setIsLoading(true);
         if (user && watchlist.length > 0) {
-          setCards(watchlist);
+          // Convert watchlist items to unified cards
+          const watchlistCards = watchlist.map((item: any) => ({
+            id: item.id,
+            type: item.type,
+            title: item.name || item.headline,
+            description: item.type === 'news' ? item.content : `${item.symbol} - Current price: $${item.price?.toFixed(2)}`,
+            contentUrl: item.type === 'news' ? item.url : undefined,
+            imageUrl: item.imageUrl,
+            metadata: {
+              symbol: item.symbol,
+              sector: item.sector,
+            },
+            createdAt: new Date(),
+            priority: 100, // High priority for watchlist items
+            tags: item.tags || [item.type],
+            engagement: {
+              views: 0,
+              saves: 0,
+              shares: 0,
+            },
+          }));
+          setCards(watchlistCards);
         } else {
           console.log('Watchlist is empty');
           setCards([]);
@@ -180,117 +208,71 @@ export default function HomeScreen() {
         return;
       }
 
-      // Check cache first if a deck type is specified
-      if (type && cardCache[type].length > 0 && isCacheValid(cardCache.timestamp)) {
+      // Check cache first if a deck type is specified and not refreshing
+      if (type && cardCache[type].length > 0 && isCacheValid(cardCache.timestamp) && !isRefresh) {
         console.log('Using cached cards for', type);
         setCards(cardCache[type]);
         return;
       }
 
       isFetchingRef.current = true;
-      setIsLoading(true);
-      
-      let stockCount = 10;
-      let cryptoCount = 10;
-      let newsCount = 10;
-
-      // Adjust counts based on deck type
-      if (type === 'stocks') {
-        stockCount = 10;
-        cryptoCount = 0;
-        newsCount = 10;
-      } else if (type === 'crypto') {
-        stockCount = 0;
-        cryptoCount = 10;
-        newsCount = 10;
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
       }
       
-      const response = await fetchMarketData(stockCount, cryptoCount, newsCount);
+      // Use personalized feed if enabled, otherwise use basic feed
+      const limit = isRefresh ? 20 : 10;
+      let unifiedCards: PersonalizedCard[];
       
-      if (!response || !response.data) {
-        console.error('Invalid response format:', response);
-        throw new Error('Invalid response from API');
-      }
-      // Separate items by type
-      const marketItems = response.data
-        .filter((item): item is MarketData => 
-          item.type === 'stock' || item.type === 'crypto'
-        )
-        .map((item: MarketData) => ({
-          ...item,
-          marketCap: item.marketCap || 0,
-          volume: item.volume || 0,
+      if (personalizationEnabled && user) {
+        unifiedCards = await cardService.getPersonalizedFeed(user.uid, limit);
+      } else {
+        const basicCards = await cardService.getBasicFeed(user?.uid || 'anonymous', limit);
+        unifiedCards = basicCards.map(card => ({
+          ...card,
+          relevanceScore: card.priority / 100,
+          personalizationReason: 'General recommendation',
+          confidence: 0.3
         }));
-
-      console.log('Market Items Count:', marketItems.length);
-      console.log('Market Items:', marketItems.map(item => `${item.type}: ${item.symbol || item.id}`));
-      
-      const newsItems = response.data
-        .filter((item) => item.type === 'news');
-
-      console.log('News Items Count:', newsItems.length);
-      console.log('Total response.data items:', response.data.length);
-      console.log('Response data types:', response.data.map(item => item.type));
-
-      // Filter market items based on deck type
-      const filteredMarketItems = type === 'stocks' 
-        ? marketItems.filter((item: MarketData) => item.type === 'stock')
-        : type === 'crypto'
-        ? marketItems.filter((item: MarketData) => item.type === 'crypto')
-        : marketItems;
-
-      // Format market cards
-      const marketCards = filteredMarketItems
-        .filter((item: MarketData) => item && item.price && item.symbol)
-        .map(formatMarketCard)
-        .filter((card: MarketData | null): card is MarketData => card !== null);
-
-      // Format news cards only if not filtering by type or if explicitly requesting discover
-      const newsCards = (!type || type === 'discover') 
-        ? newsItems.map(formatNewsCard)
-        : [];
-
-      console.log('Market Cards Count:', marketCards.length);
-      console.log('News Cards Count:', newsCards.length);
-
-      // Shuffle all cards together
-      function shuffleArray<T>(array: T[]): T[] {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
       }
-
-      const formattedCards = shuffleArray([...marketCards, ...newsCards]);
-      console.log('Total Formatted Cards:', formattedCards.length);
       
-      // Update cache if a deck type is specified
+      console.log('Loaded unified cards:', unifiedCards.length);
+      console.log('Card types:', unifiedCards.map(card => card.type));
+      
+      if (isRefresh) {
+        setCards(unifiedCards);
+        setCurrentPage(0);
+        setHasMoreCards(unifiedCards.length === limit);
+      } else {
+        // Add new cards to existing ones
+        setCards(prevCards => {
+          const existingIds = new Set(prevCards.map(card => card.id));
+          const newCards = unifiedCards.filter(card => !existingIds.has(card.id));
+          return [...prevCards, ...newCards];
+        });
+        setCurrentPage(prev => prev + 1);
+        setHasMoreCards(unifiedCards.length === limit);
+      }
+      
+      // Update cache
       if (type) {
         setCardCache(prev => ({
           ...prev,
-          [type]: formattedCards,
+          [type]: unifiedCards,
           timestamp: Date.now(),
         }));
-        setCards(formattedCards);
-      } else {
-        // Add cards only if we have less than 5 during normal operation
-        setCards(prevCards => {
-          if (prevCards.length < 5) {
-            const existingIds = new Set(prevCards.map(card => card.id));
-            const newCards = formattedCards.filter(card => !existingIds.has(card.id));
-            return [...prevCards, ...newCards];
-          }
-          return prevCards;
-        });
       }
       
     } catch (error) {
       console.error('Error loading cards:', error);
-      setCards([]);
+      if (isRefresh) {
+        setCards([]);
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
       isFetchingRef.current = false;
     }
   }, [cardCache, isCacheValid, watchlist, user]);
@@ -316,16 +298,23 @@ export default function HomeScreen() {
   // Initial load
   useEffect(() => {
     if (user) {
-      loadMoreCards();
+      loadMoreCards('discover', true);
     }
   }, [user]);
 
   // Check if we need more cards
   useEffect(() => {
     if (user && cards.length < 5 && !isFetchingRef.current) {
-      loadMoreCards();
+      loadMoreCards(activeDeck);
     }
-  }, [cards.length, user]);
+  }, [cards.length, user, activeDeck]);
+
+  // Pull to refresh handler
+  const handleRefresh = useCallback(() => {
+    if (!isFetchingRef.current) {
+      loadMoreCards(activeDeck, true);
+    }
+  }, [activeDeck, loadMoreCards]);
 
   // Add activeDeck state near the top of the component
   const [activeDeck, setActiveDeck] = useState<'stocks' | 'crypto' | 'discover' | 'watchlist'>('discover');
@@ -358,8 +347,27 @@ export default function HomeScreen() {
         // Check if card is already in watchlist
         const isAlreadyInWatchlist = watchlist.some(item => item.id === card.id);
         if (!isAlreadyInWatchlist) {
-          await saveToWatchlist(user.uid, card);
-          dispatch(addToWatchlist(card));
+          // Convert unified card to watchlist format
+          const watchlistItem = {
+            id: card.id,
+            type: card.type,
+            name: card.title,
+            symbol: card.metadata.symbol,
+            price: card.type === 'stock' || card.type === 'crypto' ? parseFloat(card.description.match(/\$([\d.]+)/)?.[1] || '0') : undefined,
+            headline: card.type === 'news' ? card.title : undefined,
+            content: card.type === 'news' ? card.description : undefined,
+            url: card.contentUrl,
+            imageUrl: card.imageUrl,
+            sector: card.metadata.sector,
+            tags: card.tags,
+          };
+          
+          await saveToWatchlist(user.uid, watchlistItem);
+          dispatch(addToWatchlist(watchlistItem));
+          
+          // Update card engagement
+          await cardService.updateCardEngagement(card.id, 'save');
+          
           // Show success feedback
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -367,7 +375,7 @@ export default function HomeScreen() {
           logEvent(AnalyticsEvents.ADD_TO_WATCHLIST, {
             card_id: card.id,
             card_type: card.type,
-            symbol: card.type !== 'news' ? card.symbol : undefined,
+            symbol: card.metadata.symbol,
           });
         } else {
           console.log('Card already in watchlist');
@@ -418,16 +426,49 @@ export default function HomeScreen() {
     const card = cards[cardIndex];
   
     try {
+      let shareMessage = '';
+      let shareTitle = '';
+      
+      switch (card.type) {
+        case 'lesson':
+          shareMessage = `${card.title}\n${card.description}`;
+          shareTitle = 'Check out this lesson';
+          break;
+        case 'podcast':
+          shareMessage = `${card.title}\n${card.description}`;
+          shareTitle = 'Check out this podcast';
+          break;
+        case 'news':
+          shareMessage = `${card.title}\n${card.description}`;
+          shareTitle = 'Check out this news';
+          break;
+        case 'stock':
+        case 'crypto':
+          shareMessage = `${card.title} (${card.metadata.symbol})\n${card.description}`;
+          shareTitle = `${card.metadata.symbol} Market Info`;
+          break;
+        case 'challenge':
+          shareMessage = `${card.title}\n${card.description}`;
+          shareTitle = 'Join this challenge';
+          break;
+        default:
+          shareMessage = `${card.title}\n${card.description}`;
+          shareTitle = 'Check this out';
+      }
+      
       await Share.share({
-        message: `${card.name} (${card.symbol})\nPrice: $${card.price?.toLocaleString()}\nChange: ${formatPercentage(card.changePercentage)}`,
-        title: card.type === 'news' ? (card as NewsCardData).headline : `${card.symbol} Stock Info`,
+        message: shareMessage,
+        title: shareTitle,
       });
+  
+      // Update card engagement
+      await cardService.updateCardEngagement(card.id, 'share');
   
       // Log share event
       logEvent(AnalyticsEvents.SHARE_CARD, {
         card_id: card.id,
         card_type: card.type,
-        symbol: card.type !== 'news' ? card.symbol : undefined,
+        symbol: card.metadata.symbol,
       });
     } catch (error) {
       console.error('Error sharing:', error);
@@ -486,10 +527,32 @@ export default function HomeScreen() {
     router.push('/chat');
   };
 
+  const togglePersonalization = () => {
+    setPersonalizationEnabled(!personalizationEnabled);
+    // Reload cards with new personalization setting
+    loadMoreCards(activeDeck, true);
+  };
+
+  const handlePersonalizationFeedback = async (cardId: string, rating: number) => {
+    if (user) {
+      try {
+        await personalizationAnalytics.collectUserFeedback(user.uid, {
+          cardId,
+          rating,
+          category: 'relevance'
+        });
+        console.log('📊 Personalization feedback collected');
+      } catch (error) {
+        console.error('Error collecting personalization feedback:', error);
+      }
+    }
+  };
+
   if (isLoading && cards.length === 0) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading unified content feed...</Text>
       </View>
     );
   }
@@ -501,13 +564,32 @@ export default function HomeScreen() {
         <Text style={styles.navigationText}>Swipe down from any tab to return here</Text>
         <MaterialCommunityIcons name="chevron-down" size={20} color="#6b7280" />
       </View>
+
+      {/* Personalization Controls */}
+      {user && (
+        <View style={styles.personalizationControls}>
+          <TouchableOpacity 
+            style={[styles.personalizationToggle, personalizationEnabled && styles.personalizationToggleActive]}
+            onPress={togglePersonalization}
+          >
+            <MaterialCommunityIcons 
+              name={personalizationEnabled ? "brain" : "brain-outline"} 
+              size={16} 
+              color={personalizationEnabled ? "#fff" : "#6b7280"} 
+            />
+            <Text style={[styles.personalizationText, personalizationEnabled && styles.personalizationTextActive]}>
+              {personalizationEnabled ? 'Personalized' : 'General'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
       
       <View style={styles.swiperContainer}>
         <Swiper
           ref={swiperRef}
           cards={cards}
           key={cards.length}
-          renderCard={(card) => card ? <MarketCard data={card} /> : null}
+          renderCard={(card) => card ? <UnifiedCard data={card} /> : null}
           onSwipedRight={handleSwipeRight}
           onSwipedLeft={handleSwipeLeft}
           onSwipedTop={handleSwipeTop}
@@ -524,6 +606,12 @@ export default function HomeScreen() {
           horizontalSwipe={true}
           cardVerticalMargin={10}
           cardHorizontalMargin={15}
+          onSwipedAll={() => {
+            // Load more cards when all cards are swiped
+            if (hasMoreCards && !isFetchingRef.current) {
+              loadMoreCards(activeDeck);
+            }
+          }}
           overlayLabels={{
             left: {
               title: 'NOPE',
@@ -655,12 +743,47 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#F0E7CB',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Graphik-Regular',
   },
   fab: {
     position: 'absolute',
     right: 16,
     borderRadius: 28,
     zIndex: 1000,
+  },
+  personalizationControls: {
+    position: 'absolute',
+    top: 100,
+    right: 16,
+    zIndex: 1000,
+  },
+  personalizationToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 6,
+  },
+  personalizationToggleActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  personalizationText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  personalizationTextActive: {
+    color: '#fff',
   },
 });

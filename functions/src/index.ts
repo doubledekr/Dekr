@@ -8,3 +8,4 @@ export * from './strategies';
 export * from './challenges';
 export * from './social';
 export * from './migrations/uploadLessonAudio';
+export * from './content/cardGenerator';
